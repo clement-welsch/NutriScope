@@ -16,19 +16,14 @@ from time import perf_counter
 import pandas as pd
 from pyarrow.parquet import read_metadata
 
-from database.connection import create_duckdb_connection
-from etl.brands import insert_brands
-from etl.categories import insert_categories
-from etl.nutrients import insert_nutrients
-from etl.products import insert_products
-from etl.products_categories import insert_products_categories
 from src.cleaning import lire_brut
 from src.cleaning import nettoyer as nettoyer_tp9
 from src.config.settings import POSTGRES_DB_ALIAS
 from src.etl_pipeline import extraire_brut, vers_tables_sql
 from src.report import generer_rapport
+from src.storage.convert_parquet import convertir
 from src.storage.export_features import sha256
-from validation.checks import check_product_codes_unique, final_check
+from src.storage.preparer_csv import preparer
 
 RACINE = Path(__file__).resolve().parents[1]
 
@@ -196,9 +191,7 @@ def nettoyer(config: Configuration) -> ResultatEtape:
     )
 
 
-def charger_base(config: Configuration) -> ResultatEtape:
-    """Recharge PostgreSQL à partir du Parquet nettoyé commun."""
-    debut = perf_counter()
+def _chercher_nettoye(config: Configuration) -> Path:
     dossier_clean = config.dossier_donnees / "clean"
     chemin_propre = (
         dossier_clean / f"produits_propres_{config.date_execution:%Y%m%d}.parquet"
@@ -216,8 +209,21 @@ def charger_base(config: Configuration) -> ResultatEtape:
                 f"Aucun Parquet nettoyé dans {dossier_clean}. "
                 "Lance d'abord l'étape nettoyer."
             )
+    return chemin_propre
 
-    propre = pd.read_parquet(chemin_propre)
+
+def charger_base(config: Configuration) -> ResultatEtape:
+    """Recharge PostgreSQL à partir du Parquet nettoyé commun."""
+    from database.connection import create_duckdb_connection
+    from etl.brands import insert_brands
+    from etl.categories import insert_categories
+    from etl.nutrients import insert_nutrients
+    from etl.products import insert_products
+    from etl.products_categories import insert_products_categories
+    from validation.checks import check_product_codes_unique, final_check
+
+    debut = perf_counter()
+    propre = pd.read_parquet(_chercher_nettoye(config))
     tables = vers_tables_sql(propre)
     lignes_attendues = len(propre)
     if len(tables["products"]) != lignes_attendues:
@@ -284,24 +290,49 @@ def charger_base(config: Configuration) -> ResultatEtape:
 
 def parquet(config: Configuration) -> ResultatEtape:
     """Convertit le jeu nettoyé commun en Parquet partitionné."""
-    # TODO 1 — Résoudre le Parquet nettoyé commun sous clean/, avec la même
-    # règle date demandée puis plus récent que charger_base. En cas d'absence,
-    # indique de lancer nettoyer. Lis le DataFrame propre, puis passe-le à
-    # src.storage.preparer_csv.preparer() et écris le CSV intermédiaire attendu
-    # par convertir(). Cette projection ajoute le rayon à partir du nettoyé.
-    #
-    # TODO 2 — Produire les partitions et leur schéma sous parquet/produits_<AAAAMMJJ>.
-    # Appelle convertir(csv_chemin, dossier_temporaire, schema_chemin) depuis
-    # src.storage.convert_parquet. Choisis un sous-dossier temporaire dédié,
-    # car convertir() efface et recrée sa destination. Place le schéma dans ce
-    # dossier pour publier les partitions et leur schéma ensemble.
-    # Compare le nombre de lignes retourné à celui du nettoyé. Une fois la sortie
-    # contrôlée, crée _SUCCESS en dernier et publie le dossier complet. Si une
-    # sortie datée existe déjà, conserve-la tant que le remplacement n'est pas prêt.
-    # Retourne la durée, le nombre de lignes et les sorties publiées.
-    # Contrôle — Vérifie les dossiers rayon=..., les types et les effectifs.
-    # Une conversion interrompue doit laisser la sortie précédente utilisable.
-    raise NotImplementedError("L'étape parquet reste à implémenter.")
+    debut = perf_counter()
+    propre = pd.read_parquet(_chercher_nettoye(config))
+    lignes_attendues = len(propre)
+    if lignes_attendues == 0:
+        raise ValueError("Le jeu nettoyé est vide. Aucune partition à écrire.")
+
+    racine_parquet = (config.dossier_donnees / "parquet").resolve()
+    racine_parquet.mkdir(parents=True, exist_ok=True)
+    destination = racine_parquet / f"produits_{config.date_execution:%Y%m%d}"
+    nom_schema = "schema_produits.json"
+    nom_marqueur = "_SUCCESS"
+
+    with TemporaryDirectory(prefix=".conversion-", dir=racine_parquet) as temporaire:
+        travail = Path(temporaire)
+        csv_propre = travail / "produits.csv"
+        preparer(propre).to_csv(csv_propre, index=False)
+
+        partitions = travail / destination.name
+        lignes = convertir(csv_propre, partitions, partitions / nom_schema)
+        if lignes != lignes_attendues:
+            raise ValueError(f"Le Parquet partitionné contient {lignes} lignes, contre {lignes_attendues} attendues.")
+        (partitions / nom_marqueur).touch()
+
+        # Garde une sauvegarde à côté du dossier temporaire si la restauration échoue.
+        sauvegarde = racine_parquet / f"{travail.name}.sauvegarde"
+        if destination.exists():
+            if not destination.is_dir() or destination.resolve() != destination:
+                raise ValueError(f"La destination Parquet doit être un dossier local : {destination}")
+            destination.rename(sauvegarde)
+        try:
+            partitions.rename(destination)
+        except OSError:
+            if sauvegarde.exists():
+                sauvegarde.rename(destination)
+            raise
+        if sauvegarde.exists():
+            sauvegarde.rename(travail / "ancienne_sortie")
+
+    return ResultatEtape(
+        duree_s=perf_counter() - debut,
+        lignes=lignes,
+        fichiers=(destination, destination / nom_schema, destination / nom_marqueur),
+    )
 
 
 def exports(config: Configuration) -> ResultatEtape:
