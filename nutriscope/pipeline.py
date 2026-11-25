@@ -7,21 +7,28 @@ import csv
 import json
 import os
 import shutil
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
-from dataclasses import asdict, dataclass
 
 import pandas as pd
 from pyarrow.parquet import read_metadata
 
+from database.connection import create_duckdb_connection
+from etl.brands import insert_brands
+from etl.categories import insert_categories
+from etl.nutrients import insert_nutrients
+from etl.products import insert_products
+from etl.products_categories import insert_products_categories
 from src.cleaning import lire_brut
 from src.cleaning import nettoyer as nettoyer_tp9
-from src.etl_pipeline import extraire_brut
-from src.storage.export_features import sha256
+from src.config.settings import POSTGRES_DB_ALIAS
+from src.etl_pipeline import extraire_brut, vers_tables_sql
 from src.report import generer_rapport
+from src.storage.export_features import sha256
+from validation.checks import check_product_codes_unique, final_check
 
 RACINE = Path(__file__).resolve().parents[1]
 
@@ -190,29 +197,89 @@ def nettoyer(config: Configuration) -> ResultatEtape:
 
 
 def charger_base(config: Configuration) -> ResultatEtape:
-    """Charge PostgreSQL depuis le jeu nettoyé commun et lance les contrôles."""
-    # TODO 1 — Résoudre le même produits_propres_<AAAAMMJJ>.parquet que parquet.
-    # Préfère la date demandée, puis le plus récent. En l'absence de fichier,
-    # indique de lancer nettoyer. Lis le Parquet puis appelle vers_tables_sql()
-    # de src.etl_pipeline pour construire les cinq tables d'import.
-    #
-    # TODO 2 — Raccorder les contrôles et insertions existants à ces tables.
-    # Utilise src/load_database.py comme référence pour l'ordre des insertions.
-    # Son main() refait le nettoyage et clear_database() tronque via une autre
-    # connexion. Les fonctions insert_* lisent des fichiers depuis INPUT_DIR.
-    # Fais évoluer ces interfaces pour recevoir les fichiers d'import de ce run
-    # et utilise une base de test dédiée. Vérifie les fichiers et l'unicité des
-    # codes avant l'écriture. Exécute le remplacement et les insertions dans une
-    # même transaction PostgreSQL afin qu'un échec permette un rollback complet.
-    #
-    # TODO 3 — Contrôler le résultat et retourner la durée et le nombre de produits.
-    # final_check() affiche des totaux. Récupère aussi le COUNT de products
-    # pour vérifier qu'il est égal à len(propre). Retourne les chemins réellement
-    # produits, par exemple un rapport de contrôle daté sous db/ si tu en écris un.
-    # Contrôle — Enchaîne deux imports du même extrait dans la base de test.
-    # Compare les effectifs et les codes, puis provoque un échec pendant l'import
-    # et vérifie que le contenu validé avant cet échec est toujours disponible.
-    raise NotImplementedError("L'étape charger_base reste à implémenter.")
+    """Recharge PostgreSQL à partir du Parquet nettoyé commun."""
+    debut = perf_counter()
+    dossier_clean = config.dossier_donnees / "clean"
+    chemin_propre = (
+        dossier_clean / f"produits_propres_{config.date_execution:%Y%m%d}.parquet"
+    )
+
+    if not chemin_propre.is_file():
+        candidats = (
+            fichier
+            for fichier in dossier_clean.glob("produits_propres_[0-9]" + "[0-9]" * 7 + ".parquet")
+            if fichier.is_file()
+        )
+        chemin_propre = max(candidats, key=lambda fichier: fichier.name, default=None)
+        if chemin_propre is None:
+            raise FileNotFoundError(
+                f"Aucun Parquet nettoyé dans {dossier_clean}. "
+                "Lance d'abord l'étape nettoyer."
+            )
+
+    propre = pd.read_parquet(chemin_propre)
+    tables = vers_tables_sql(propre)
+    lignes_attendues = len(propre)
+    if len(tables["products"]) != lignes_attendues:
+        raise ValueError("La projection SQL a changé le nombre de produits.")
+
+    with TemporaryDirectory() as temporaire:
+        dossier_import = Path(temporaire)
+        for nom, table in tables.items():
+            table.to_parquet(dossier_import / f"{nom}.parquet", index=False)
+
+        connection = create_duckdb_connection()
+        try:
+            check_product_codes_unique(
+                connection,
+                parquet_path=dossier_import / "products.parquet",
+            )
+
+            connection.execute("BEGIN TRANSACTION")
+            try:
+                connection.execute(
+                    "CALL postgres_execute(?, ?)",
+                    [
+                        POSTGRES_DB_ALIAS,
+                        """
+                        TRUNCATE TABLE
+                            public.nutrients,
+                            public.products_categories,
+                            public.products,
+                            public.categories,
+                            public.brands
+                        """,
+                    ],
+                )
+
+                insert_brands(connection, dossier_import)
+                insert_categories(connection, dossier_import)
+                insert_products(connection, dossier_import)
+                insert_products_categories(connection, dossier_import)
+                insert_nutrients(connection, dossier_import)
+
+                lignes = connection.execute(
+                    f"SELECT COUNT(*) FROM {POSTGRES_DB_ALIAS}.public.products"
+                ).fetchone()[0]
+                if lignes != lignes_attendues:
+                    raise ValueError(
+                        f"PostgreSQL contient {lignes} produits, "
+                        f"alors que {lignes_attendues} étaient attendus."
+                    )
+
+                final_check(connection)
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        finally:
+            connection.close()
+
+    return ResultatEtape(
+        duree_s=perf_counter() - debut,
+        lignes=lignes,
+        fichiers=(),
+    )
 
 
 def parquet(config: Configuration) -> ResultatEtape:
