@@ -1,11 +1,11 @@
 import pandas as pd
 import pytest
-from src.cleaning import _compte_rendu
 
 from src.cleaning import (
     KJ_PAR_KCAL,
     REGLES,
     CompteRendu,
+    _compte_rendu,
     borner_nutriments,
     corriger_energie,
     dedupliquer_codes,
@@ -16,41 +16,43 @@ from src.cleaning import (
     typer_colonnes,
 )
 
-
 # ---------------------------------------------------------------------------
 # Règle 1 - typer_colonnes
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def brut() -> pd.DataFrame:
     """Jeu de données représentant des lignes issues du CSV brut."""
-    return pd.DataFrame({
-        "code": [
-            "0000356470029",
-            "00004206",
-            "3017620422003",
-        ],
-        "nova_group": [
-            2.0,
-            None,
-            "4",
-        ],
-        "nutriscore_score": [
-            "12",
-            "abc",
-            3.5,
-        ],
-        "fat_100g": [
-            "25.0",
-            12,
-            None,
-        ],
-        "completeness": [
-            0.3,
-            0.275,
-            0.9,
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "code": [
+                "0000356470029",
+                "00004206",
+                "3017620422003",
+            ],
+            "nova_group": [
+                2.0,
+                None,
+                "4",
+            ],
+            "nutriscore_score": [
+                "12",
+                "abc",
+                3.5,
+            ],
+            "fat_100g": [
+                "25.0",
+                12,
+                None,
+            ],
+            "completeness": [
+                0.3,
+                0.275,
+                0.9,
+            ],
+        }
+    )
 
 
 def test_typer_colonnes_types(brut):
@@ -132,42 +134,45 @@ def test_typer_colonnes_idempotente(brut):
 # Règle 2 - dedupliquer_codes
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def codes_dupliques() -> pd.DataFrame:
-    return pd.DataFrame({
-        "code": [
-            "000001",
-            "000002",
-            "000001",
-            None,
-            None,
-            "000003",
-        ],
-        "name": [
-            "Produit A",
-            "Produit B",
-            "Produit A doublon",
-            "Produit sans code 1",
-            "Produit sans code 2",
-            "Produit C",
-        ],
-        "completeness": [
-            50.0,
-            80.0,
-            90.0,
-            70.0,
-            60.0,
-            75.0,
-        ],
-        "last_modified_t": [
-            1000,
-            1000,
-            900,
-            1000,
-            2000,
-            1000,
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "code": [
+                "000001",
+                "000002",
+                "000001",
+                None,
+                None,
+                "000003",
+            ],
+            "name": [
+                "Produit A",
+                "Produit B",
+                "Produit A doublon",
+                "Produit sans code 1",
+                "Produit sans code 2",
+                "Produit C",
+            ],
+            "completeness": [
+                50.0,
+                80.0,
+                90.0,
+                70.0,
+                60.0,
+                75.0,
+            ],
+            "last_modified_t": [
+                1000,
+                1000,
+                900,
+                1000,
+                2000,
+                1000,
+            ],
+        }
+    )
 
 
 def test_dedupliquer_codes(codes_dupliques):
@@ -180,10 +185,13 @@ def test_dedupliquer_codes(codes_dupliques):
     ]
 
     # Le doublon ayant la meilleure complétude est conservé.
-    assert resultat.loc[
-        resultat["code"] == "000001",
-        "name",
-    ].iloc[0] == "Produit A doublon"
+    assert (
+        resultat.loc[
+            resultat["code"] == "000001",
+            "name",
+        ].iloc[0]
+        == "Produit A doublon"
+    )
 
     assert len(resultat) == 3
 
@@ -200,24 +208,26 @@ def test_dedupliquer_codes(codes_dupliques):
 
 
 def test_dedupliquer_codes_garde_le_plus_recent_en_cas_degalite():
-    donnees = pd.DataFrame({
-        "code": [
-            "000001",
-            "000001",
-        ],
-        "name": [
-            "Ancienne version",
-            "Nouvelle version",
-        ],
-        "completeness": [
-            90.0,
-            90.0,
-        ],
-        "last_modified_t": [
-            1000,
-            2000,
-        ],
-    })
+    donnees = pd.DataFrame(
+        {
+            "code": [
+                "000001",
+                "000001",
+            ],
+            "name": [
+                "Ancienne version",
+                "Nouvelle version",
+            ],
+            "completeness": [
+                90.0,
+                90.0,
+            ],
+            "last_modified_t": [
+                1000,
+                2000,
+            ],
+        }
+    )
 
     resultat, _ = dedupliquer_codes(donnees)
 
@@ -226,12 +236,14 @@ def test_dedupliquer_codes_garde_le_plus_recent_en_cas_degalite():
 
 
 def test_dedupliquer_codes_garde_la_premiere_ligne_si_toutes_les_cles_sont_egales():
-    donnees = pd.DataFrame({
-        "code": ["000001", "000001"],
-        "name": ["Première fiche", "Seconde fiche"],
-        "completeness": [90.0, 90.0],
-        "last_modified_t": [2000, 2000],
-    })
+    donnees = pd.DataFrame(
+        {
+            "code": ["000001", "000001"],
+            "name": ["Première fiche", "Seconde fiche"],
+            "completeness": [90.0, 90.0],
+            "last_modified_t": [2000, 2000],
+        }
+    )
 
     resultat, _ = dedupliquer_codes(donnees)
 
@@ -259,6 +271,7 @@ def test_dedupliquer_codes_idempotente(codes_dupliques):
     )
 
     assert cr.lignes_touchees == 0
+
 
 def test_dedupliquer_codes_gere_les_index_dupliques():
     df = pd.DataFrame(
@@ -293,30 +306,33 @@ def test_dedupliquer_codes_gere_les_index_dupliques():
 # Règle 3 - normaliser_unites
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def donnees_unites():
-    return pd.DataFrame({
-        "energy-kcal_100g": [
-            None,
-            100.0,
-            100.0,
-        ],
-        "energy_100g": [
-            418.4,
-            418.4,
-            1000.0,
-        ],
-        "salt_100g": [
-            None,
-            2.5,
-            5.0,
-        ],
-        "sodium_100g": [
-            1.0,
-            1.0,
-            1.0,
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "energy-kcal_100g": [
+                None,
+                100.0,
+                100.0,
+            ],
+            "energy_100g": [
+                418.4,
+                418.4,
+                1000.0,
+            ],
+            "salt_100g": [
+                None,
+                2.5,
+                5.0,
+            ],
+            "sodium_100g": [
+                1.0,
+                1.0,
+                1.0,
+            ],
+        }
+    )
 
 
 def test_normaliser_unites(donnees_unites):
@@ -327,9 +343,7 @@ def test_normaliser_unites(donnees_unites):
     assert resultat.loc[
         2,
         "energy-kcal_100g",
-    ] == pytest.approx(
-        1000.0 / KJ_PAR_KCAL
-    )
+    ] == pytest.approx(1000.0 / KJ_PAR_KCAL)
 
     assert resultat.loc[
         0,
@@ -392,24 +406,26 @@ def test_normaliser_unites_idempotente(donnees_unites):
 
 
 def test_normaliser_unites_kj_nuls_ne_recalculent_pas():
-    donnees = pd.DataFrame({
-        "energy-kcal_100g": [
-            100.0,
-            200.0,
-        ],
-        "energy_100g": [
-            0.0,
-            -100.0,
-        ],
-        "salt_100g": [
-            1.0,
-            1.0,
-        ],
-        "sodium_100g": [
-            0.4,
-            0.4,
-        ],
-    })
+    donnees = pd.DataFrame(
+        {
+            "energy-kcal_100g": [
+                100.0,
+                200.0,
+            ],
+            "energy_100g": [
+                0.0,
+                -100.0,
+            ],
+            "salt_100g": [
+                1.0,
+                1.0,
+            ],
+            "sodium_100g": [
+                0.4,
+                0.4,
+            ],
+        }
+    )
 
     resultat, cr = normaliser_unites(donnees)
 
@@ -425,15 +441,18 @@ def test_normaliser_unites_kj_nuls_ne_recalculent_pas():
 # Règle 4 - borner_nutriments
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def nutriments_invalides() -> pd.DataFrame:
-    return pd.DataFrame({
-        "fat_100g": [25.0, -1.0, 101.0],
-        "sugars_100g": [25.0, -1.0, 101.0],
-        "carbohydrates_100g": [25.0, -1.0, 101.0],
-        "sodium_100g": [25.0, -1.0, 40.1],
-        "saturated-fat_100g": [25.0, -1.0, 101.0],
-    })
+    return pd.DataFrame(
+        {
+            "fat_100g": [25.0, -1.0, 101.0],
+            "sugars_100g": [25.0, -1.0, 101.0],
+            "carbohydrates_100g": [25.0, -1.0, 101.0],
+            "sodium_100g": [25.0, -1.0, 40.1],
+            "saturated-fat_100g": [25.0, -1.0, 101.0],
+        }
+    )
 
 
 def test_borner_nutriments_valeurs_invalides(nutriments_invalides):
@@ -454,91 +473,84 @@ def test_borner_nutriments_valeurs_invalides(nutriments_invalides):
 
 
 def test_borner_nutriments_sous_totaux():
-    df = pd.DataFrame({
-        "carbohydrates_100g": [
-            50.0,
-            50.0,
-            50.0,
-        ],
-        "sugars_100g": [
-            50.0,
-            50.4,
-            51.0,
-        ],
-        "fat_100g": [
-            20.0,
-            20.0,
-            20.0,
-        ],
-        "saturated-fat_100g": [
-            20.0,
-            20.4,
-            21.0,
-        ],
-    })
+    df = pd.DataFrame(
+        {
+            "carbohydrates_100g": [
+                50.0,
+                50.0,
+                50.0,
+            ],
+            "sugars_100g": [
+                50.0,
+                50.4,
+                51.0,
+            ],
+            "fat_100g": [
+                20.0,
+                20.0,
+                20.0,
+            ],
+            "saturated-fat_100g": [
+                20.0,
+                20.4,
+                21.0,
+            ],
+        }
+    )
 
     resultat, _ = borner_nutriments(df)
 
-    assert not pd.isna(
-        resultat["sugars_100g"].iloc[0]
-    )
+    assert not pd.isna(resultat["sugars_100g"].iloc[0])
 
-    assert not pd.isna(
-        resultat["sugars_100g"].iloc[1]
-    )
+    assert not pd.isna(resultat["sugars_100g"].iloc[1])
 
-    assert pd.isna(
-        resultat["sugars_100g"].iloc[2]
-    )
+    assert pd.isna(resultat["sugars_100g"].iloc[2])
 
-    assert not pd.isna(
-        resultat["saturated-fat_100g"].iloc[0]
-    )
+    assert not pd.isna(resultat["saturated-fat_100g"].iloc[0])
 
-    assert not pd.isna(
-        resultat["saturated-fat_100g"].iloc[1]
-    )
+    assert not pd.isna(resultat["saturated-fat_100g"].iloc[1])
 
-    assert pd.isna(
-        resultat["saturated-fat_100g"].iloc[2]
-    )
+    assert pd.isna(resultat["saturated-fat_100g"].iloc[2])
 
 
 # ---------------------------------------------------------------------------
 # Règle 5 - corriger_energie
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def energie_invalide() -> pd.DataFrame:
-    return pd.DataFrame({
-        "energy-kcal_100g": [
-            0.0,
-            -1.0,
-            901.0,
-            100.0,
-            370.0,
-            100.0,
-        ],
-        "energy_100g": [
-            0.0,
-            -1.0,
-            901.0,
-            418.4,
-            1548.08,
-            418.4,
-        ],
-        "carbohydrates_100g": [50.0] * 6,
-        "proteins_100g": [20.0] * 6,
-        "fat_100g": [10.0] * 6,
-        "pnns_groups_1": [
-            None,
-            None,
-            None,
-            None,
-            None,
-            "Alcoholic beverages",
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "energy-kcal_100g": [
+                0.0,
+                -1.0,
+                901.0,
+                100.0,
+                370.0,
+                100.0,
+            ],
+            "energy_100g": [
+                0.0,
+                -1.0,
+                901.0,
+                418.4,
+                1548.08,
+                418.4,
+            ],
+            "carbohydrates_100g": [50.0] * 6,
+            "proteins_100g": [20.0] * 6,
+            "fat_100g": [10.0] * 6,
+            "pnns_groups_1": [
+                None,
+                None,
+                None,
+                None,
+                None,
+                "Alcoholic beverages",
+            ],
+        }
+    )
 
 
 def test_corriger_energie(energie_invalide):
@@ -569,13 +581,15 @@ def test_corriger_energie(energie_invalide):
 
 
 def test_corriger_energie_sans_classification_applique_449():
-    donnees = pd.DataFrame({
-        "energy-kcal_100g": [100.0],
-        "energy_100g": [418.4],
-        "carbohydrates_100g": [20.0],
-        "proteins_100g": [10.0],
-        "fat_100g": [10.0],
-    })
+    donnees = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0],
+            "energy_100g": [418.4],
+            "carbohydrates_100g": [20.0],
+            "proteins_100g": [10.0],
+            "fat_100g": [10.0],
+        }
+    )
 
     resultat, compte_rendu = corriger_energie(donnees)
 
@@ -587,28 +601,29 @@ def test_corriger_energie_sans_classification_applique_449():
 # Règle 6 - traiter_categories_vides
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def categories_vides() -> pd.DataFrame:
-    return pd.DataFrame({
-        "code": [
-            "000001",
-            "000002",
-            "000003",
-            "000004",
-        ],
-        "food_groups_tags": [
-            ["en:sugary-snacks"],
-            [],
-            "   ",
-            None,
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "code": [
+                "000001",
+                "000002",
+                "000003",
+                "000004",
+            ],
+            "food_groups_tags": [
+                ["en:sugary-snacks"],
+                [],
+                "   ",
+                None,
+            ],
+        }
+    )
 
 
 def test_traiter_categories_vides(categories_vides):
-    resultat, cr = traiter_categories_vides(
-        categories_vides
-    )
+    resultat, cr = traiter_categories_vides(categories_vides)
 
     assert resultat["food_groups_tags"].iloc[0] == ["en:sugary-snacks"]
     assert pd.isna(resultat["food_groups_tags"].iloc[1])
@@ -642,13 +657,9 @@ def test_traiter_categories_vides_ne_modifie_pas_l_entree(
 def test_traiter_categories_vides_idempotente(
     categories_vides,
 ):
-    une_fois, _ = traiter_categories_vides(
-        categories_vides
-    )
+    une_fois, _ = traiter_categories_vides(categories_vides)
 
-    deux_fois, cr = traiter_categories_vides(
-        une_fois
-    )
+    deux_fois, cr = traiter_categories_vides(une_fois)
 
     pd.testing.assert_frame_equal(
         une_fois,
@@ -662,63 +673,64 @@ def test_traiter_categories_vides_idempotente(
 # Règle 7 - strategie_manquants
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def donnees_manquants() -> pd.DataFrame:
-    return pd.DataFrame({
-        "code": [
-            "000001",
-            "000002",
-            "000003",
-        ],
-        "name": [
-            "Produit A",
-            None,
-            "Produit C",
-        ],
-        "completeness": [
-            80.0,
-            None,
-            90.0,
-        ],
-        "brand_id": [
-            1,
-            None,
-            3,
-        ],
-        "nutriscore_grade": [
-            "a",
-            None,
-            "c",
-        ],
-        "nutriscore_score": [
-            1,
-            None,
-            10,
-        ],
-        "proteins_100g": [
-            5.0,
-            None,
-            10.0,
-        ],
-        "sugars_100g": [
-            2.0,
-            None,
-            5.0,
-        ],
-        "salt_100g": [
-            0.5,
-            None,
-            1.0,
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "code": [
+                "000001",
+                "000002",
+                "000003",
+            ],
+            "name": [
+                "Produit A",
+                None,
+                "Produit C",
+            ],
+            "completeness": [
+                80.0,
+                None,
+                90.0,
+            ],
+            "brand_id": [
+                1,
+                None,
+                3,
+            ],
+            "nutriscore_grade": [
+                "a",
+                None,
+                "c",
+            ],
+            "nutriscore_score": [
+                1,
+                None,
+                10,
+            ],
+            "proteins_100g": [
+                5.0,
+                None,
+                10.0,
+            ],
+            "sugars_100g": [
+                2.0,
+                None,
+                5.0,
+            ],
+            "salt_100g": [
+                0.5,
+                None,
+                1.0,
+            ],
+        }
+    )
 
 
 def test_strategie_manquants_conserve_les_na(
     donnees_manquants,
 ):
-    resultat, cr = strategie_manquants(
-        donnees_manquants
-    )
+    resultat, cr = strategie_manquants(donnees_manquants)
 
     pd.testing.assert_frame_equal(
         resultat,
@@ -748,13 +760,9 @@ def test_strategie_manquants_ne_modifie_pas_l_entree(
 def test_strategie_manquants_idempotente(
     donnees_manquants,
 ):
-    une_fois, _ = strategie_manquants(
-        donnees_manquants
-    )
+    une_fois, _ = strategie_manquants(donnees_manquants)
 
-    deux_fois, cr = strategie_manquants(
-        une_fois
-    )
+    deux_fois, cr = strategie_manquants(une_fois)
 
     pd.testing.assert_frame_equal(
         une_fois,
@@ -768,100 +776,103 @@ def test_strategie_manquants_idempotente(
 # Pipeline complet - nettoyer
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def donnees_pipeline() -> pd.DataFrame:
-    return pd.DataFrame({
-        "code": [
-            "000001",
-            "000002",
-            "000001",
-            "000003",
-        ],
-        "food_groups_tags": [
-            ["en:sugary-snacks"],
-            [],
-            [],
-            ["en:beverages"],
-        ],
-        "nova_group": [
-            2.0,
-            3.0,
-            None,
-            4.0,
-        ],
-        "nutriscore_score": [
-            10.0,
-            5.0,
-            8.0,
-            3.0,
-        ],
-        "fat_100g": [
-            10.0,
-            20.0,
-            30.0,
-            5.0,
-        ],
-        "sugars_100g": [
-            5.0,
-            10.0,
-            15.0,
-            2.0,
-        ],
-        "carbohydrates_100g": [
-            20.0,
-            30.0,
-            40.0,
-            10.0,
-        ],
-        "proteins_100g": [
-            5.0,
-            10.0,
-            10.0,
-            2.0,
-        ],
-        "energy-kcal_100g": [
-            150.0,
-            200.0,
-            250.0,
-            100.0,
-        ],
-        "energy_100g": [
-            627.6,
-            836.8,
-            1046.0,
-            418.4,
-        ],
-        "sodium_100g": [
-            0.5,
-            0.8,
-            1.0,
-            0.2,
-        ],
-        "salt_100g": [
-            1.25,
-            2.0,
-            2.5,
-            0.5,
-        ],
-        "saturated-fat_100g": [
-            2.0,
-            4.0,
-            5.0,
-            1.0,
-        ],
-        "completeness": [
-            0.9,
-            0.8,
-            0.7,
-            1.0,
-        ],
-        "pnns_groups_1": [
-            "Snacks",
-            "Snacks",
-            "Snacks",
-            "Beverages",
-        ],
-    })
+    return pd.DataFrame(
+        {
+            "code": [
+                "000001",
+                "000002",
+                "000001",
+                "000003",
+            ],
+            "food_groups_tags": [
+                ["en:sugary-snacks"],
+                [],
+                [],
+                ["en:beverages"],
+            ],
+            "nova_group": [
+                2.0,
+                3.0,
+                None,
+                4.0,
+            ],
+            "nutriscore_score": [
+                10.0,
+                5.0,
+                8.0,
+                3.0,
+            ],
+            "fat_100g": [
+                10.0,
+                20.0,
+                30.0,
+                5.0,
+            ],
+            "sugars_100g": [
+                5.0,
+                10.0,
+                15.0,
+                2.0,
+            ],
+            "carbohydrates_100g": [
+                20.0,
+                30.0,
+                40.0,
+                10.0,
+            ],
+            "proteins_100g": [
+                5.0,
+                10.0,
+                10.0,
+                2.0,
+            ],
+            "energy-kcal_100g": [
+                150.0,
+                200.0,
+                250.0,
+                100.0,
+            ],
+            "energy_100g": [
+                627.6,
+                836.8,
+                1046.0,
+                418.4,
+            ],
+            "sodium_100g": [
+                0.5,
+                0.8,
+                1.0,
+                0.2,
+            ],
+            "salt_100g": [
+                1.25,
+                2.0,
+                2.5,
+                0.5,
+            ],
+            "saturated-fat_100g": [
+                2.0,
+                4.0,
+                5.0,
+                1.0,
+            ],
+            "completeness": [
+                0.9,
+                0.8,
+                0.7,
+                1.0,
+            ],
+            "pnns_groups_1": [
+                "Snacks",
+                "Snacks",
+                "Snacks",
+                "Beverages",
+            ],
+        }
+    )
 
 
 def test_nettoyer_enchaine_toutes_les_regles(
@@ -872,10 +883,7 @@ def test_nettoyer_enchaine_toutes_les_regles(
         REGLES,
     )
 
-    assert [
-        cr.regle
-        for cr in journal
-    ] == [
+    assert [cr.regle for cr in journal] == [
         "typer_colonnes",
         "dedupliquer_codes",
         "normaliser_unites",
@@ -906,9 +914,7 @@ def test_nettoyer_applique_les_transformations(
     ]
 
     assert resultat["food_groups_tags"].iloc[0] == ["en:sugary-snacks"]
-    assert pd.isna(
-        resultat["food_groups_tags"].iloc[1]
-    )
+    assert pd.isna(resultat["food_groups_tags"].iloc[1])
     assert resultat["food_groups_tags"].iloc[2] == ["en:beverages"]
 
 
@@ -927,6 +933,7 @@ def test_nettoyer_ne_modifie_pas_l_entree(
         copie,
     )
 
+
 def test_nettoyer_conserve_un_compte_rendu_par_regle(
     donnees_pipeline,
 ):
@@ -941,6 +948,7 @@ def test_nettoyer_conserve_un_compte_rendu_par_regle(
     )
     assert journal == []
 
+
 def test_nettoyer_est_idempotent(
     donnees_pipeline,
 ):
@@ -952,13 +960,16 @@ def test_nettoyer_est_idempotent(
         resultat_1,
     )
 
+
 def test_normaliser_unites_kcal_manquantes_et_kj_nuls_ou_negatifs():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [None, None, None],
-        "energy_100g": [0.0, -100.0, None],
-        "salt_100g": [None, None, None],
-        "sodium_100g": [None, None, None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [None, None, None],
+            "energy_100g": [0.0, -100.0, None],
+            "salt_100g": [None, None, None],
+            "sodium_100g": [None, None, None],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -967,12 +978,14 @@ def test_normaliser_unites_kcal_manquantes_et_kj_nuls_ou_negatifs():
 
 
 def test_normaliser_unites_kj_invalides_ne_remplacent_pas_les_kcal():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0, 200.0],
-        "energy_100g": [0.0, -100.0],
-        "salt_100g": [None, None],
-        "sodium_100g": [None, None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0, 200.0],
+            "energy_100g": [0.0, -100.0],
+            "salt_100g": [None, None],
+            "sodium_100g": [None, None],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -981,12 +994,14 @@ def test_normaliser_unites_kj_invalides_ne_remplacent_pas_les_kcal():
 
 
 def test_normaliser_unites_kcal_derivees_depuis_kj_valides():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [None],
-        "energy_100g": [418.4],
-        "salt_100g": [None],
-        "sodium_100g": [None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [None],
+            "energy_100g": [418.4],
+            "salt_100g": [None],
+            "sodium_100g": [None],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -995,12 +1010,14 @@ def test_normaliser_unites_kcal_derivees_depuis_kj_valides():
 
 
 def test_normaliser_unites_idempotente_apres_derivation():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [None],
-        "energy_100g": [418.4],
-        "salt_100g": [None],
-        "sodium_100g": [None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [None],
+            "energy_100g": [418.4],
+            "salt_100g": [None],
+            "sodium_100g": [None],
+        }
+    )
 
     resultat_1, _ = normaliser_unites(df)
     resultat_2, compte_rendu_2 = normaliser_unites(resultat_1)
@@ -1008,13 +1025,16 @@ def test_normaliser_unites_idempotente_apres_derivation():
     pd.testing.assert_frame_equal(resultat_1, resultat_2)
     assert compte_rendu_2.lignes_touchees == 0
 
+
 def test_normaliser_unites_kj_hors_bornes_ne_derive_pas_les_kcal():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [None],
-        "energy_100g": [74000.0],
-        "salt_100g": [None],
-        "sodium_100g": [None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [None],
+            "energy_100g": [74000.0],
+            "salt_100g": [None],
+            "sodium_100g": [None],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -1024,12 +1044,14 @@ def test_normaliser_unites_kj_hors_bornes_ne_derive_pas_les_kcal():
 
 
 def test_normaliser_unites_kj_hors_bornes_ne_remplace_pas_les_kcal():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0],
-        "energy_100g": [74000.0],
-        "salt_100g": [None],
-        "sodium_100g": [None],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0],
+            "energy_100g": [74000.0],
+            "salt_100g": [None],
+            "sodium_100g": [None],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -1037,13 +1059,16 @@ def test_normaliser_unites_kj_hors_bornes_ne_remplace_pas_les_kcal():
     assert resultat.loc[0, "energy_100g"] == 74000.0
     assert compte_rendu.details["kcal_recalculees"] == 0
 
+
 def test_normaliser_unites_sel_negatif_ne_corrige_pas_le_sodium():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0],
-        "energy_100g": [418.4],
-        "salt_100g": [-1.0],
-        "sodium_100g": [0.4],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0],
+            "energy_100g": [418.4],
+            "salt_100g": [-1.0],
+            "sodium_100g": [0.4],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -1053,12 +1078,14 @@ def test_normaliser_unites_sel_negatif_ne_corrige_pas_le_sodium():
 
 
 def test_normaliser_unites_sodium_negatif_ne_declenche_pas_de_correction():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0],
-        "energy_100g": [418.4],
-        "salt_100g": [0.5],
-        "sodium_100g": [-0.4],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0],
+            "energy_100g": [418.4],
+            "salt_100g": [0.5],
+            "sodium_100g": [-0.4],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -1068,12 +1095,14 @@ def test_normaliser_unites_sodium_negatif_ne_declenche_pas_de_correction():
 
 
 def test_normaliser_unites_incoherence_sel_sodium_corrigee():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0],
-        "energy_100g": [418.4],
-        "salt_100g": [0.5],
-        "sodium_100g": [0.4],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0],
+            "energy_100g": [418.4],
+            "salt_100g": [0.5],
+            "sodium_100g": [0.4],
+        }
+    )
 
     resultat, compte_rendu = normaliser_unites(df)
 
@@ -1081,24 +1110,30 @@ def test_normaliser_unites_incoherence_sel_sodium_corrigee():
     assert resultat.loc[0, "sodium_100g"] == 0.2
     assert compte_rendu.details["sodium_recalcule"] == 1
 
+
 def test_normaliser_unites_idempotente_sel_sodium():
-    df = pd.DataFrame({
-        "energy-kcal_100g": [100.0, 100.0, None, 100.0],
-        "energy_100g": [418.4, 418.4, 836.8, 418.4],
-        "salt_100g": [0.5, None, None, -1.0],
-        "sodium_100g": [0.4, 0.2, 0.4, 0.4],
-    })
+    df = pd.DataFrame(
+        {
+            "energy-kcal_100g": [100.0, 100.0, None, 100.0],
+            "energy_100g": [418.4, 418.4, 836.8, 418.4],
+            "salt_100g": [0.5, None, None, -1.0],
+            "sodium_100g": [0.4, 0.2, 0.4, 0.4],
+        }
+    )
 
     resultat_1, _ = normaliser_unites(df)
     resultat_2, _ = normaliser_unites(resultat_1)
 
     pd.testing.assert_frame_equal(resultat_1, resultat_2)
 
+
 def test_compte_rendu_compte_une_ligne_une_seule_fois():
-    avant = pd.DataFrame({
-        "a": [1, 2, 3],
-        "b": [10, 20, 30],
-    })
+    avant = pd.DataFrame(
+        {
+            "a": [1, 2, 3],
+            "b": [10, 20, 30],
+        }
+    )
 
     apres = avant.copy()
     apres.loc[0, "a"] = 100

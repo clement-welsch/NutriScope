@@ -44,9 +44,25 @@ def test_verifier_coherence(chemins):
 
 def test_une_mesure_en_sous_processus(chemins):
     res = subprocess.run(
-        [sys.executable, "-m", "src.storage.benchmark", "--une", "duckdb_parquet", "agregat_rayon",
-         "--csv", str(chemins["csv"]), "--parquet", str(chemins["parquet"]), "--sqlite", str(chemins["sqlite"])],
-        cwd=RACINE, capture_output=True, text=True, encoding="utf-8", check=True,
+        [
+            sys.executable,
+            "-m",
+            "src.storage.benchmark",
+            "--une",
+            "duckdb_parquet",
+            "agregat_rayon",
+            "--csv",
+            str(chemins["csv"]),
+            "--parquet",
+            str(chemins["parquet"]),
+            "--sqlite",
+            str(chemins["sqlite"]),
+        ],
+        cwd=RACINE,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
     )
     mesure = json.loads(res.stdout.strip().splitlines()[-1])
     assert mesure["pic_mo"] > 0

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 
 from config.settings import DB_CONFIG
-from utils.timer import timer, print_duration
+from utils.timer import print_duration, timer
 
 
 def clear_database():

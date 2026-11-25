@@ -15,7 +15,6 @@ Données : © Open Food Facts contributors — ODbL.
 import argparse
 import json
 import platform
-import shutil
 import statistics
 import subprocess
 import sys
@@ -57,14 +56,20 @@ GRADES_LISTE = ["a", "b", "c", "d", "e"]
 
 # ---------------------------------------------------------------- moteurs
 
+
 def _pandas(requete: str, csv: Path) -> list[list]:
     import pandas as pd
 
-    d = pd.read_csv(csv, dtype={"code": "string"}, usecols=COLONNES_PANDAS[requete],
-                    keep_default_na=False, na_values=[""])
+    d = pd.read_csv(
+        csv, dtype={"code": "string"}, usecols=COLONNES_PANDAS[requete], keep_default_na=False, na_values=[""]
+    )
     if requete == "agregat_rayon":
-        g = d.groupby("rayon").agg(nb=("rayon", "size"), sucres=("sugars_100g", "mean"),
-                                   sel=("salt_100g", "mean"), score=("nutriscore_score", "mean"))
+        g = d.groupby("rayon").agg(
+            nb=("rayon", "size"),
+            sucres=("sugars_100g", "mean"),
+            sel=("salt_100g", "mean"),
+            score=("nutriscore_score", "mean"),
+        )
         return g.reset_index().values.tolist()
     if requete == "filtre_tri":
         d = d[(d["sous_rayon"] == "breakfast-cereals") & d["nutriscore_grade"].isin(GRADES_LISTE)]
@@ -119,18 +124,21 @@ def executer(moteur: str, requete: str, chemins: dict[str, Path]) -> list[list]:
 
 # ---------------------------------------------------------------- construction
 
+
 def construire_sqlite(csv: Path, base: Path, taille_bloc: int = 100_000) -> int:
     """SQLite construit depuis le CSV nettoyé, sans index ; tirets des colonnes remplacés par `_`."""
-    import pandas as pd
     import sqlite3
+
+    import pandas as pd
 
     base.parent.mkdir(parents=True, exist_ok=True)
     base.unlink(missing_ok=True)
     connexion = sqlite3.connect(base)
     lignes = 0
     try:
-        for bloc in pd.read_csv(csv, dtype={"code": "string"}, keep_default_na=False, na_values=[""],
-                                chunksize=taille_bloc):
+        for bloc in pd.read_csv(
+            csv, dtype={"code": "string"}, keep_default_na=False, na_values=[""], chunksize=taille_bloc
+        ):
             bloc.columns = [c.replace("-", "_") for c in bloc.columns]
             bloc.to_sql("produits", connexion, if_exists="append", index=False)
             lignes += len(bloc)
@@ -158,6 +166,7 @@ def taille(chemin: Path) -> int:
 
 # ---------------------------------------------------------------- mesure
 
+
 def pic_memoire_mo() -> float:
     """Pic de mémoire résidente du processus, en Mo (Windows, Linux, macOS)."""
     if sys.platform == "win32":
@@ -175,11 +184,21 @@ def une_mesure(moteur: str, requete: str, chemins: dict[str, Path]) -> dict:
     if moteur == "imports":
         import importlib
 
-        for nom in {"pandas_csv": ["pandas"], "sqlite": ["sqlite3"],
-                    "duckdb_parquet": ["duckdb"], "duckdb_csv": ["duckdb"]}[requete]:
+        for nom in {
+            "pandas_csv": ["pandas"],
+            "sqlite": ["sqlite3"],
+            "duckdb_parquet": ["duckdb"],
+            "duckdb_csv": ["duckdb"],
+        }[requete]:
             importlib.import_module(nom)
-        return {"moteur": moteur, "requete": requete, "secondes": 0.0, "lignes": 0,
-                "premiere_ligne": [], "pic_mo": pic_memoire_mo()}
+        return {
+            "moteur": moteur,
+            "requete": requete,
+            "secondes": 0.0,
+            "lignes": 0,
+            "premiere_ligne": [],
+            "pic_mo": pic_memoire_mo(),
+        }
     # imports hors chronomètre : on les déclenche avant de mesurer
     if moteur == "pandas_csv":
         import pandas  # noqa: F401
@@ -187,22 +206,42 @@ def une_mesure(moteur: str, requete: str, chemins: dict[str, Path]) -> dict:
         import sqlite3  # noqa: F401
     else:
         import duckdb  # noqa: F401
+
         from src.storage import convert_parquet  # noqa: F401
     debut = time.perf_counter()
     lignes = executer(moteur, requete, chemins)
     duree = time.perf_counter() - debut
-    return {"moteur": moteur, "requete": requete, "secondes": duree, "lignes": len(lignes),
-            "premiere_ligne": lignes[0] if lignes else [], "pic_mo": pic_memoire_mo()}
+    return {
+        "moteur": moteur,
+        "requete": requete,
+        "secondes": duree,
+        "lignes": len(lignes),
+        "premiere_ligne": lignes[0] if lignes else [],
+        "pic_mo": pic_memoire_mo(),
+    }
 
 
 def sous_processus(moteur: str, requete: str, args: argparse.Namespace) -> dict:
-    cmd = [sys.executable, "-m", "src.storage.benchmark", "--une", moteur, requete,
-           "--csv", str(args.csv), "--parquet", str(args.parquet), "--sqlite", str(args.sqlite)]
+    cmd = [
+        sys.executable,
+        "-m",
+        "src.storage.benchmark",
+        "--une",
+        moteur,
+        requete,
+        "--csv",
+        str(args.csv),
+        "--parquet",
+        str(args.parquet),
+        "--sqlite",
+        str(args.sqlite),
+    ]
     env_utf8 = {"PYTHONIOENCODING": "utf-8"}
     import os
 
-    res = subprocess.run(cmd, cwd=RACINE, capture_output=True, text=True, encoding="utf-8",
-                         env={**os.environ, **env_utf8})
+    res = subprocess.run(
+        cmd, check=False, cwd=RACINE, capture_output=True, text=True, encoding="utf-8", env={**os.environ, **env_utf8}
+    )
     if res.returncode != 0:
         raise RuntimeError(f"{moteur}/{requete} a échoué :\n{res.stderr}")
     return json.loads(res.stdout.strip().splitlines()[-1])
@@ -222,23 +261,31 @@ def verifier_coherence(chemins: dict[str, Path]) -> dict[str, int]:
 
 # ---------------------------------------------------------------- rapport
 
+
 def machine() -> list[str]:
     import psutil
 
-    return [f"- Système : {platform.platform()}",
+    return [
+        f"- Système : {platform.platform()}",
+        (
             f"- Processeur : {platform.processor() or 'inconnu'} ({psutil.cpu_count(logical=False)} cœurs physiques, "
-            f"{psutil.cpu_count()} logiques)",
-            f"- Mémoire vive : {psutil.virtual_memory().total / 2**30:.1f} Go"]
+            f"{psutil.cpu_count()} logiques)"
+        ),
+        f"- Mémoire vive : {psutil.virtual_memory().total / 2**30:.1f} Go",
+    ]
 
 
 def versions() -> list[str]:
+    import sqlite3
+
     import duckdb
     import pandas
     import pyarrow
-    import sqlite3
 
-    return [f"- Python {platform.python_version()}, pandas {pandas.__version__}, DuckDB {duckdb.__version__}",
-            f"- SQLite {sqlite3.sqlite_version}, pyarrow {pyarrow.__version__}"]
+    return [
+        f"- Python {platform.python_version()}, pandas {pandas.__version__}, DuckDB {duckdb.__version__}",
+        f"- SQLite {sqlite3.sqlite_version}, pyarrow {pyarrow.__version__}",
+    ]
 
 
 def plan_elagage(parquet: Path) -> str:
@@ -260,30 +307,54 @@ def plan_elagage(parquet: Path) -> str:
 
 def ecrire_rapport(args, lignes_csv: int, couts: dict, mesures: dict, references: dict) -> None:
     mo = lambda o: f"{o / 2**20:.1f} Mo"
-    sortie = ["# Benchmark : pandas, SQLite, DuckDB", "", f"Données : {LICENCE}", "",
-              "## Machine et versions", "", *machine(), *versions(), "",
-              "## Jeu mesuré", "",
-              f"- {lignes_csv:,} lignes (sortie du nettoyage, TP 9)",
-              f"- CSV nettoyé : {mo(taille(args.csv))}",
-              f"- Parquet partitionné par rayon (ZSTD) : {mo(taille(args.parquet))}",
-              f"- SQLite sans index : {mo(taille(args.sqlite))}", "",
-              "## Coût de construction", "",
-              "| Support | Durée (s) | Remarque |", "|---|---:|---|",
-              "| CSV nettoyé | 0 | sortie du nettoyage, pas de construction propre |",
-              f"| SQLite | {couts['sqlite']:.2f} | construit depuis le CSV, sans index |",
-              f"| Parquet | {couts['parquet']:.2f} | `convertir` relancé sur une copie temporaire |", "",
-              "## Méthode", "",
-              "- Chaque mesure tourne dans un sous-processus neuf ; "
-              f"{args.repetitions} répétition(s), médiane des temps, maximum des pics mémoire.",
-              "- Temps = lecture + requête, imports exclus ; SQLite : connexion + requête (la base est déjà construite).",
-              "- pandas lit le CSV avec `dtype={'code': 'string'}` et `usecols` limité aux colonnes utiles à "
-              "chaque requête (agrégat : 4 colonnes, filtre et tri : 6, forte cardinalité : 2).",
-              "- DuckDB/Parquet lit une vue sur le dossier partitionné ; DuckDB/CSV relit le CSV avec types explicites.",
-              "- Pic mémoire : pic de mémoire résidente du processus ; la ligne `imports` donne le poids de "
-              "l'interpréteur et des bibliothèques seuls.",
-              "- Avant de chronométrer, tous les moteurs rendent le même nombre de lignes et la même clé en première ligne.",
-              "", "## Résultats", "",
-              "| Requête | Moteur | Temps médian (s) | Pic mémoire (Mo) |", "|---|---|---:|---:|"]
+    sortie = [
+        "# Benchmark : pandas, SQLite, DuckDB",
+        "",
+        f"Données : {LICENCE}",
+        "",
+        "## Machine et versions",
+        "",
+        *machine(),
+        *versions(),
+        "",
+        "## Jeu mesuré",
+        "",
+        f"- {lignes_csv:,} lignes (sortie du nettoyage, TP 9)",
+        f"- CSV nettoyé : {mo(taille(args.csv))}",
+        f"- Parquet partitionné par rayon (ZSTD) : {mo(taille(args.parquet))}",
+        f"- SQLite sans index : {mo(taille(args.sqlite))}",
+        "",
+        "## Coût de construction",
+        "",
+        "| Support | Durée (s) | Remarque |",
+        "|---|---:|---|",
+        "| CSV nettoyé | 0 | sortie du nettoyage, pas de construction propre |",
+        f"| SQLite | {couts['sqlite']:.2f} | construit depuis le CSV, sans index |",
+        f"| Parquet | {couts['parquet']:.2f} | `convertir` relancé sur une copie temporaire |",
+        "",
+        "## Méthode",
+        "",
+        (
+            "- Chaque mesure tourne dans un sous-processus neuf ; "
+            f"{args.repetitions} répétition(s), médiane des temps, maximum des pics mémoire."
+        ),
+        "- Temps = lecture + requête, imports exclus ; SQLite : connexion + requête (la base est déjà construite).",
+        (
+            "- pandas lit le CSV avec `dtype={'code': 'string'}` et `usecols` limité aux colonnes utiles à "
+            "chaque requête (agrégat : 4 colonnes, filtre et tri : 6, forte cardinalité : 2)."
+        ),
+        "- DuckDB/Parquet lit une vue sur le dossier partitionné ; DuckDB/CSV relit le CSV avec types explicites.",
+        (
+            "- Pic mémoire : pic de mémoire résidente du processus ; la ligne `imports` donne le poids de "
+            "l'interpréteur et des bibliothèques seuls."
+        ),
+        "- Avant de chronométrer, tous les moteurs rendent le même nombre de lignes et la même clé en première ligne.",
+        "",
+        "## Résultats",
+        "",
+        "| Requête | Moteur | Temps médian (s) | Pic mémoire (Mo) |",
+        "|---|---|---:|---:|",
+    ]
     for requete in REQUETES_SQL:
         for moteur in MOTEURS:
             m = mesures[(moteur, requete)]
@@ -294,8 +365,19 @@ def ecrire_rapport(args, lignes_csv: int, couts: dict, mesures: dict, references
     for requete in REQUETES_SQL:
         ratio = mesures[("pandas_csv", requete)]["secondes"] / mesures[("duckdb_parquet", requete)]["secondes"]
         sortie.append(f"| {requete} | ×{ratio:.1f} |")
-    sortie += ["", "## Élagage de partitions (EXPLAIN DuckDB)", "", "```", plan_elagage(args.parquet), "```", "",
-               "## Lecture", "", "<!-- lecture -->", ""]
+    sortie += [
+        "",
+        "## Élagage de partitions (EXPLAIN DuckDB)",
+        "",
+        "```",
+        plan_elagage(args.parquet),
+        "```",
+        "",
+        "## Lecture",
+        "",
+        "<!-- lecture -->",
+        "",
+    ]
     args.sortie.parent.mkdir(parents=True, exist_ok=True)
     args.sortie.write_text("\n".join(sortie), encoding="utf-8")
 
@@ -305,7 +387,9 @@ def lancer(args: argparse.Namespace) -> None:
     debut = time.perf_counter()
     lignes_sqlite = construire_sqlite(args.csv, args.sqlite)
     couts = {"sqlite": time.perf_counter() - debut, "parquet": cout_parquet(args.csv)}
-    print(f"SQLite construit ({lignes_sqlite:,} lignes) en {couts['sqlite']:.2f} s ; Parquet en {couts['parquet']:.2f} s")
+    print(
+        f"SQLite construit ({lignes_sqlite:,} lignes) en {couts['sqlite']:.2f} s ; Parquet en {couts['parquet']:.2f} s"
+    )
 
     attendues = verifier_coherence(chemins)
     print("Cohérence vérifiée :", attendues)
@@ -316,10 +400,14 @@ def lancer(args: argparse.Namespace) -> None:
         references[moteur] = max(refs)
         for requete in REQUETES_SQL:
             essais = [sous_processus(moteur, requete, args) for _ in range(args.repetitions)]
-            mesures[(moteur, requete)] = {"secondes": statistics.median(e["secondes"] for e in essais),
-                                          "pic_mo": max(e["pic_mo"] for e in essais)}
-            print(f"{moteur:15s} {requete:18s} {mesures[(moteur, requete)]['secondes']:.3f} s "
-                  f"{mesures[(moteur, requete)]['pic_mo']:.0f} Mo")
+            mesures[(moteur, requete)] = {
+                "secondes": statistics.median(e["secondes"] for e in essais),
+                "pic_mo": max(e["pic_mo"] for e in essais),
+            }
+            print(
+                f"{moteur:15s} {requete:18s} {mesures[(moteur, requete)]['secondes']:.3f} s "
+                f"{mesures[(moteur, requete)]['pic_mo']:.0f} Mo"
+            )
     ecrire_rapport(args, lignes_sqlite, couts, mesures, references)
     print(f"Rapport écrit : {args.sortie}")
 

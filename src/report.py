@@ -17,28 +17,53 @@ import pandas as pd
 
 try:
     from src.cleaning import (
-        KCAL_MAX, NUTRIMENT_MAX_G, SEL_PAR_SODIUM, TOLERANCE_SEL_SODIUM, TOLERANCE_SOUS_TOTAL_G,
-        COLONNES_0_100, CompteRendu, calcul_energie_449, typer_colonnes,
+        COLONNES_0_100,
+        KCAL_MAX,
+        NUTRIMENT_MAX_G,
+        SEL_PAR_SODIUM,
+        TOLERANCE_SEL_SODIUM,
+        TOLERANCE_SOUS_TOTAL_G,
+        CompteRendu,
+        calcul_energie_449,
+        typer_colonnes,
     )
 except ModuleNotFoundError:  # exécution historique depuis le répertoire src/
     from cleaning import (
-        KCAL_MAX, NUTRIMENT_MAX_G, SEL_PAR_SODIUM, TOLERANCE_SEL_SODIUM, TOLERANCE_SOUS_TOTAL_G,
-        COLONNES_0_100, CompteRendu, calcul_energie_449, typer_colonnes,
+        COLONNES_0_100,
+        KCAL_MAX,
+        NUTRIMENT_MAX_G,
+        SEL_PAR_SODIUM,
+        TOLERANCE_SEL_SODIUM,
+        TOLERANCE_SOUS_TOTAL_G,
+        CompteRendu,
+        calcul_energie_449,
+        typer_colonnes,
     )
 
 SOURCE_PAR_DEFAUT = Path("data/food.parquet")
 SORTIE_PAR_DEFAUT = Path("docs/data/rapport_nettoyage.md")
 
 COLONNES_CLES = [
-    "product_name", "brands_tags", "food_groups_tags", "pnns_groups_1", "nutriscore_grade",
-    "energy-kcal_100g", "fat_100g", "saturated-fat_100g", "carbohydrates_100g",
-    "sugars_100g", "fiber_100g", "proteins_100g", "salt_100g",
+    "product_name",
+    "brands_tags",
+    "food_groups_tags",
+    "pnns_groups_1",
+    "nutriscore_grade",
+    "energy-kcal_100g",
+    "fat_100g",
+    "saturated-fat_100g",
+    "carbohydrates_100g",
+    "sugars_100g",
+    "fiber_100g",
+    "proteins_100g",
+    "salt_100g",
 ]
 
 
 # ============================================================
 # Diagnostic (mêmes définitions que la démo 3.2.1)
 # ============================================================
+
 
 def diagnostiquer(df: pd.DataFrame) -> pd.Series:
     """Nombre de lignes en anomalie par règle métier.
@@ -71,6 +96,7 @@ def diagnostiquer(df: pd.DataFrame) -> pd.Series:
 # Mise en forme
 # ============================================================
 
+
 def _nombre(n) -> str:
     return f"{n:,}".replace(",", " ")
 
@@ -95,9 +121,15 @@ def _details(compte_rendu: CompteRendu) -> str:
 # Rapport
 # ============================================================
 
-def generer_rapport(avant: pd.DataFrame, apres: pd.DataFrame, journal: list[CompteRendu],
-                    chemin: str | Path, source: str = str(SOURCE_PAR_DEFAUT),
-                    jour: date | None = None) -> str:
+
+def generer_rapport(
+    avant: pd.DataFrame,
+    apres: pd.DataFrame,
+    journal: list[CompteRendu],
+    chemin: str | Path,
+    source: str = str(SOURCE_PAR_DEFAUT),
+    jour: date | None = None,
+) -> str:
     """Écrit le rapport Markdown dans `chemin` et renvoie son contenu."""
     jour = jour or date.today()
     s = []
@@ -108,58 +140,85 @@ def generer_rapport(avant: pd.DataFrame, apres: pd.DataFrame, journal: list[Comp
     s.append("- Données : Open Food Facts, © Open Food Facts contributors — licence ODbL\n")
 
     s.append("## Volumétrie\n")
-    s.append(_tableau(["", "avant", "après", "écart"], [
-        ["lignes", _nombre(len(avant)), _nombre(len(apres)), _nombre(len(apres) - len(avant))],
-        ["colonnes", avant.shape[1], apres.shape[1], apres.shape[1] - avant.shape[1]],
-        ["codes distincts", _nombre(avant["code"].nunique()), _nombre(apres["code"].nunique()),
-         _nombre(apres["code"].nunique() - avant["code"].nunique())],
-    ]) + "\n")
+    s.append(
+        _tableau(
+            ["", "avant", "après", "écart"],
+            [
+                ["lignes", _nombre(len(avant)), _nombre(len(apres)), _nombre(len(apres) - len(avant))],
+                ["colonnes", avant.shape[1], apres.shape[1], apres.shape[1] - avant.shape[1]],
+                [
+                    "codes distincts",
+                    _nombre(avant["code"].nunique()),
+                    _nombre(apres["code"].nunique()),
+                    _nombre(apres["code"].nunique() - avant["code"].nunique()),
+                ],
+            ],
+        )
+        + "\n"
+    )
 
     s.append("## Lignes touchées par règle\n")
-    s.append("Une ligne touchée par plusieurs sous-règles compte une fois dans « touchées », "
-             "une fois par sous-règle dans le détail.\n")
-    s.append(_tableau(["règle", "lignes avant", "lignes après", "touchées", "détail"], [
-        [f"`{cr.regle}`", _nombre(cr.lignes_avant), _nombre(cr.lignes_apres),
-         _nombre(cr.lignes_touchees), _details(cr)]
-        for cr in journal
-    ]) + "\n")
+    s.append(
+        "Une ligne touchée par plusieurs sous-règles compte une fois dans « touchées », "
+        "une fois par sous-règle dans le détail.\n"
+    )
+    s.append(
+        _tableau(
+            ["règle", "lignes avant", "lignes après", "touchées", "détail"],
+            [
+                [
+                    f"`{cr.regle}`",
+                    _nombre(cr.lignes_avant),
+                    _nombre(cr.lignes_apres),
+                    _nombre(cr.lignes_touchees),
+                    _details(cr),
+                ]
+                for cr in journal
+            ],
+        )
+        + "\n"
+    )
 
     s.append("## Anomalies métier\n")
     s.append("Lignes en anomalie, mêmes définitions que le diagnostic de la démo 3.2.1.\n")
     diag_avant, diag_apres = diagnostiquer(avant), diagnostiquer(apres)
-    s.append(_tableau(["anomalie", "avant", "après"], [
-        [nom, _nombre(diag_avant[nom]), _nombre(diag_apres[nom])] for nom in diag_avant.index
-    ]) + "\n")
+    s.append(
+        _tableau(
+            ["anomalie", "avant", "après"],
+            [[nom, _nombre(diag_avant[nom]), _nombre(diag_apres[nom])] for nom in diag_avant.index],
+        )
+        + "\n"
+    )
 
     s.append("## Manquants sur les colonnes clés\n")
     lignes = []
     for col in COLONNES_CLES:
         m_avant = int(avant[col].isna().sum()) if col in avant.columns else None
         m_apres = int(apres[col].isna().sum()) if col in apres.columns else None
-        lignes.append([
-            f"`{col}`",
-            "—" if m_avant is None else f"{_nombre(m_avant)} ({_pct(m_avant, len(avant))})",
-            "retirée" if m_apres is None else f"{_nombre(m_apres)} ({_pct(m_apres, len(apres))})",
-        ])
+        lignes.append(
+            [
+                f"`{col}`",
+                "—" if m_avant is None else f"{_nombre(m_avant)} ({_pct(m_avant, len(avant))})",
+                "retirée" if m_apres is None else f"{_nombre(m_apres)} ({_pct(m_apres, len(apres))})",
+            ]
+        )
     s.append(_tableau(["colonne", "avant", "après"], lignes) + "\n")
 
     s.append("## Produits par rayon après nettoyage\n")
-    pnns_disponible = (
-        "pnns_groups_1" in apres.columns
-        and apres["pnns_groups_1"].notna().any()
-    )
+    pnns_disponible = "pnns_groups_1" in apres.columns and apres["pnns_groups_1"].notna().any()
     if pnns_disponible:
         rayons = apres["pnns_groups_1"].fillna("(vide)").value_counts()
         rayons = rayons.sort_index().sort_values(ascending=False, kind="stable")
-        s.append(_tableau(["rayon", "produits", "part"], [
-            [rayon, _nombre(n), _pct(n, len(apres))] for rayon, n in rayons.items()
-        ]) + "\n")
+        s.append(
+            _tableau(
+                ["rayon", "produits", "part"], [[rayon, _nombre(n), _pct(n, len(apres))] for rayon, n in rayons.items()]
+            )
+            + "\n"
+        )
     elif "food_groups_tags" in apres.columns:
         groupes = apres[["code", "food_groups_tags"]].explode("food_groups_tags")
         groupes = groupes.loc[
-            groupes["food_groups_tags"].map(
-                lambda valeur: isinstance(valeur, str) and bool(valeur.strip())
-            )
+            groupes["food_groups_tags"].map(lambda valeur: isinstance(valeur, str) and bool(valeur.strip()))
         ]
         if groupes.empty:
             s.append(
@@ -175,15 +234,15 @@ def generer_rapport(avant: pd.DataFrame, apres: pd.DataFrame, journal: list[Comp
             )
             comptes = groupes.groupby("food_groups_tags")["code"].nunique()
             comptes = comptes.sort_index().sort_values(ascending=False, kind="stable")
-            s.append(_tableau(["groupe Open Food Facts", "produits", "part des produits"], [
-                [groupe, _nombre(n), _pct(n, len(apres))]
-                for groupe, n in comptes.items()
-            ]) + "\n")
+            s.append(
+                _tableau(
+                    ["groupe Open Food Facts", "produits", "part des produits"],
+                    [[groupe, _nombre(n), _pct(n, len(apres))] for groupe, n in comptes.items()],
+                )
+                + "\n"
+            )
     else:
-        s.append(
-            "Indisponible : `pnns_groups_1` est absent ou entièrement manquant "
-            "dans les données préparées.\n"
-        )
+        s.append("Indisponible : `pnns_groups_1` est absent ou entièrement manquant dans les données préparées.\n")
 
     s.append("## Colonnes ajoutées et retirées\n")
     ajoutees = [c for c in apres.columns if c not in avant.columns]

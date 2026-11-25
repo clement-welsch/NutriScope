@@ -1,4 +1,3 @@
-
 """Fonctions de visualisation réutilisables pour le TP11.
 
 Les fonctions de ce module construisent les figures à partir de données ou
@@ -6,15 +5,13 @@ de résultats déjà calculés par l'EDA. Elles renvoient (fig, ax) afin que
 l'appelant puisse afficher ou exporter la figure.
 """
 
-from collections.abc import Mapping
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from src import eda_lib
 
+from src import eda_lib
 
 # Palette reprise des prototypes du notebook TP11.
 BLEU = "#2a78d6"
@@ -33,9 +30,8 @@ def _verifier_colonnes(
     """Vérifie la présence des colonnes nécessaires."""
     manquantes = colonnes - set(df.columns)
     if manquantes:
-        raise ValueError(
-            f"{nom} : colonnes manquantes : {sorted(manquantes)}"
-        )
+        raise ValueError(f"{nom} : colonnes manquantes : {sorted(manquantes)}")
+
 
 # 1. Les snacks sucrés sont plus concentrés en sucres que les boissons
 def tracer_medianes_sucres(
@@ -76,8 +72,7 @@ def tracer_medianes_sucres(
         ax.text(
             barre.get_width() + decalage,
             barre.get_y() + barre.get_height() / 2,
-            f"{barre.get_width():.1f}".replace(".", ",")
-            + f"  (n={int(ligne['n'])})",
+            f"{barre.get_width():.1f}".replace(".", ",") + f"  (n={int(ligne['n'])})",
             va="center",
             fontsize=9,
         )
@@ -85,6 +80,7 @@ def tracer_medianes_sucres(
     ax.set_xlim(left=0)
     fig.tight_layout()
     return fig, ax
+
 
 # 2. Les snacks sucrés présentent fréquemment un Nutri-Score E, contrairement aux fruits et légumes
 def tracer_grades_mis_en_avant(
@@ -121,12 +117,7 @@ def tracer_grades_mis_en_avant(
         ["pnns_groups_1", "nutriscore_grade"],
     ].copy()
 
-    donnees["nutriscore_grade"] = (
-        donnees["nutriscore_grade"]
-        .astype("string")
-        .str.strip()
-        .str.lower()
-    )
+    donnees["nutriscore_grade"] = donnees["nutriscore_grade"].astype("string").str.strip().str.lower()
     donnees = donnees.loc[donnees["nutriscore_grade"].isin(grades)]
 
     effectifs = pd.crosstab(
@@ -136,13 +127,8 @@ def tracer_grades_mis_en_avant(
 
     totaux = effectifs.sum(axis=1)
     if (totaux == 0).any():
-        absents = [
-            traductions[rayon]
-            for rayon in totaux.index[totaux == 0]
-        ]
-        raise ValueError(
-            f"Aucun produit avec un grade A à E pour : {absents}"
-        )
+        absents = [traductions[rayon] for rayon in totaux.index[totaux == 0]]
+        raise ValueError(f"Aucun produit avec un grade A à E pour : {absents}")
 
     proportions = effectifs.div(totaux, axis=0) * 100
     proportions.index = proportions.index.map(traductions)
@@ -166,9 +152,7 @@ def tracer_grades_mis_en_avant(
             pourcentage = proportions.loc[rayon, grade]
 
             if pourcentage >= 5:
-                couleur_texte = (
-                    "white" if grade in {"A", "D", "E"} else ENCRE
-                )
+                couleur_texte = "white" if grade in {"A", "D", "E"} else ENCRE
                 ax.text(
                     position_gauche + pourcentage / 2,
                     i,
@@ -184,10 +168,7 @@ def tracer_grades_mis_en_avant(
 
     ax.set_xlabel("Part des produits notés (%)")
     ax.set_ylabel("")
-    ax.set_title(
-        "Les snacks sucrés et les fruits et légumes "
-        "présentent des grades Nutri-Score très différents"
-    )
+    ax.set_title("Les snacks sucrés et les fruits et légumes présentent des grades Nutri-Score très différents")
     ax.set_xlim(0, 100)
     ax.legend(
         title="Nutri-Score",
@@ -213,7 +194,8 @@ def tracer_grades_mis_en_avant(
 
     fig.tight_layout(rect=(0, 0.12, 1, 1))
     return fig, ax
- 
+
+
 # 3. Un produit sur cinq ne possède pas de rayon exploitable
 def tracer_couverture_rayons(produits):
     """Compare la couverture des rayons sur l'ensemble des produits."""
@@ -226,9 +208,7 @@ def tracer_couverture_rayons(produits):
         raise ValueError("Impossible de tracer un échantillon vide.")
 
     nombre_connus = len(eda_lib.rayons_connus(produits))
-    nombre_unknown = int(
-        produits[colonne_rayon].eq(eda_lib.RAYON_INCONNU).sum()
-    )
+    nombre_unknown = int(produits[colonne_rayon].eq(eda_lib.RAYON_INCONNU).sum())
     nombre_absents = int(produits[colonne_rayon].isna().sum())
     nombre_non_exploitables = total - nombre_connus
 
@@ -269,8 +249,7 @@ def tracer_couverture_rayons(produits):
     ax.text(
         part_connus + part_non_exploitables / 2,
         0,
-        f"{part_non_exploitables:.1f} %\n"
-        f"{nombre_non_exploitables:,}".replace(",", " "),
+        f"{part_non_exploitables:.1f} %\n{nombre_non_exploitables:,}".replace(",", " "),
         ha="center",
         va="center",
         color=ENCRE,
@@ -286,8 +265,9 @@ def tracer_couverture_rayons(produits):
     ax.text(
         0,
         -0.75,
-        f"Sans rayon exploitable : {nombre_unknown:,} unknown et "
-        f"{nombre_absents:,} valeur(s) manquante(s).".replace(",", " "),
+        f"Sans rayon exploitable : {nombre_unknown:,} unknown et {nombre_absents:,} valeur(s) manquante(s).".replace(
+            ",", " "
+        ),
         transform=ax.transData,
         ha="left",
         va="top",
@@ -300,6 +280,7 @@ def tracer_couverture_rayons(produits):
     fig.tight_layout()
 
     return fig, ax
+
 
 # 4. La complétude nutritionnelle reste imparfaite
 def tracer_completude_rayons(
@@ -319,9 +300,7 @@ def tracer_completude_rayons(
     donnees = completude.copy()
 
     for colonne in ("n", "fiches_completes", "score_present"):
-        donnees[colonne] = pd.to_numeric(
-            donnees[colonne], errors="raise"
-        )
+        donnees[colonne] = pd.to_numeric(donnees[colonne], errors="raise")
 
     if (
         (donnees["n"] < 0).any()
@@ -331,23 +310,15 @@ def tracer_completude_rayons(
         raise ValueError("Effectifs ou taux de complétude hors limites.")
 
     # Estimations des effectifs à partir des taux EDA en pourcentage.
-    donnees["avec_nutriscore"] = (
-        donnees["n"] * donnees["score_present"] / 100
-    ).round().astype(int)
-    donnees["fiches_completes_n"] = (
-        donnees["n"] * donnees["fiches_completes"] / 100
-    ).round().astype(int)
+    donnees["avec_nutriscore"] = (donnees["n"] * donnees["score_present"] / 100).round().astype(int)
+    donnees["fiches_completes_n"] = (donnees["n"] * donnees["fiches_completes"] / 100).round().astype(int)
 
-    donnees = donnees.sort_values(
-        ["fiches_completes", "n"], ascending=True, kind="stable"
-    )
+    donnees = donnees.sort_values(["fiches_completes", "n"], ascending=True, kind="stable")
 
     positions = np.arange(len(donnees))
     hauteur = 0.24
 
-    fig, ax = plt.subplots(
-        figsize=(12, max(5, 0.55 * len(donnees)))
-    )
+    fig, ax = plt.subplots(figsize=(12, max(5, 0.55 * len(donnees))))
 
     ax.barh(
         positions - hauteur,
@@ -416,6 +387,7 @@ def tracer_completude_rayons(
     fig.tight_layout(rect=(0, 0.04, 1, 1))
     return fig, ax
 
+
 # 5. Certains produits présentent un écart important entre deux estimations énergétiques
 def tracer_ecarts_energetiques(comparables: pd.DataFrame):
     """Compare l'énergie calculée à l'énergie déclarée pour les cas les plus extrêmes."""
@@ -439,18 +411,13 @@ def tracer_ecarts_energetiques(comparables: pd.DataFrame):
 
     # Préparer des libellés lisibles, y compris si le nom manque.
     noms = ecarts["product_name"].fillna("Produit sans nom").astype(str)
-    ecarts["libelle"] = [
-        f"{nom[:45]} ({i})" for i, nom in enumerate(noms, start=1)
-    ]
+    ecarts["libelle"] = [f"{nom[:45]} ({i})" for i, nom in enumerate(noms, start=1)]
 
     ecarts = ecarts.sort_values("ecart_energie")
 
     fig, ax = plt.subplots(figsize=(11, 7))
 
-    couleurs = [
-        BLEU if valeur >= 0 else GRIS
-        for valeur in ecarts["ecart_energie"]
-    ]
+    couleurs = [BLEU if valeur >= 0 else GRIS for valeur in ecarts["ecart_energie"]]
 
     barres = ax.barh(
         ecarts["libelle"],
@@ -460,9 +427,7 @@ def tracer_ecarts_energetiques(comparables: pd.DataFrame):
 
     ax.axvline(0, color=ENCRE, linewidth=0.8)
     ax.set_title("Les écarts énergétiques les plus importants")
-    ax.set_xlabel(
-        "Énergie calculée − énergie déclarée (kcal/100 g)"
-    )
+    ax.set_xlabel("Énergie calculée − énergie déclarée (kcal/100 g)")
     ax.set_ylabel("")
     ax.grid(axis="x", alpha=0.25)
     ax.set_axisbelow(True)
@@ -486,6 +451,7 @@ def tracer_ecarts_energetiques(comparables: pd.DataFrame):
     fig.tight_layout()
     return fig, ax
 
+
 # 6. Les valeurs extrêmes ne sont pas toutes des erreurs
 def tracer_bilan_valeurs_extremes(
     extremes: pd.DataFrame,
@@ -494,9 +460,7 @@ def tracer_bilan_valeurs_extremes(
 ) -> tuple[Figure, np.ndarray]:
     """Illustre un cas extrême et présente le bilan de la revue manuelle."""
 
-    colonnes_extremes = {
-        "code", "product_name", "rayon", "nutriment", "valeur", "z"
-    }
+    colonnes_extremes = {"code", "product_name", "rayon", "nutriment", "valeur", "z"}
     _verifier_colonnes(extremes, colonnes_extremes, "extremes")
 
     nutriment = "saturated-fat_100g"
@@ -517,26 +481,24 @@ def tracer_bilan_valeurs_extremes(
     taux_extremes = 100 * nb_produits_extremes / total_rayons_connus
 
     # Produits du rayon retenu pour l'exemple.
-    produits = par_rayon.loc[
-        par_rayon[eda_lib.RAYON].eq(rayon),
-        ["code", "product_name", nutriment],
-    ].dropna(subset=[nutriment]).copy()
+    produits = (
+        par_rayon.loc[
+            par_rayon[eda_lib.RAYON].eq(rayon),
+            ["code", "product_name", nutriment],
+        ]
+        .dropna(subset=[nutriment])
+        .copy()
+    )
 
     if produits.empty:
-        raise ValueError(
-            f"Aucun produit avec {nutriment} renseigné dans le rayon {rayon!r}."
-        )
+        raise ValueError(f"Aucun produit avec {nutriment} renseigné dans le rayon {rayon!r}.")
 
-    produits[nutriment] = pd.to_numeric(
-        produits[nutriment], errors="coerce"
-    )
+    produits[nutriment] = pd.to_numeric(produits[nutriment], errors="coerce")
     produits = produits.dropna(subset=[nutriment]).reset_index(drop=True)
 
     cible = produits.loc[produits["code"].astype(str).eq(code_cible)]
     if cible.empty:
-        raise ValueError(
-            f"Le produit cible {code_cible} est absent du rayon {rayon!r}."
-        )
+        raise ValueError(f"Le produit cible {code_cible} est absent du rayon {rayon!r}.")
 
     position_cible = int(cible.index[0])
     valeur_cible = float(cible[nutriment].iloc[0])
@@ -655,6 +617,7 @@ def tracer_bilan_valeurs_extremes(
     fig.tight_layout(rect=(0, 0.06, 1, 0.86))
     return fig, axes
 
+
 # 7. La qualité des données conditionne la fiabilité de NutriScope=
 def tracer_synthese_qualite(
     perimetre: pd.DataFrame,
@@ -679,43 +642,18 @@ def tracer_synthese_qualite(
     rayons_connus = eda_lib.rayons_connus(perimetre)
     n_rayons_connus = len(rayons_connus)
 
-    n_complets = int(
-        rayons_connus[eda_lib.NUTRIMENTS_CLES]
-        .notna()
-        .all(axis=1)
-        .sum()
-    )
+    n_complets = int(rayons_connus[eda_lib.NUTRIMENTS_CLES].notna().all(axis=1).sum())
 
-    taux_couverture = (
-        100 * n_rayons_connus / total if total else 0
-    )
-    taux_completude = (
-        100 * n_complets / n_rayons_connus
-        if n_rayons_connus
-        else 0
-    )
+    taux_couverture = 100 * n_rayons_connus / total if total else 0
+    taux_completude = 100 * n_complets / n_rayons_connus if n_rayons_connus else 0
 
     ecarts = comparables["ecart_energie"].dropna()
     n_evaluables = len(ecarts)
-    n_ecarts_importants = int(
-        (ecarts.abs() > eda_lib.ECART_ENERGIE_KCAL).sum()
-    )
-    taux_ecarts = (
-        100 * n_ecarts_importants / n_evaluables
-        if n_evaluables
-        else 0
-    )
+    n_ecarts_importants = int((ecarts.abs() > eda_lib.ECART_ENERGIE_KCAL).sum())
+    taux_ecarts = 100 * n_ecarts_importants / n_evaluables if n_evaluables else 0
 
-    n_produits_extremes = (
-        int(extremes["code"].nunique())
-        if not extremes.empty
-        else 0
-    )
-    taux_extremes = (
-        100 * n_produits_extremes / n_rayons_connus
-        if n_rayons_connus
-        else 0
-    )
+    n_produits_extremes = int(extremes["code"].nunique()) if not extremes.empty else 0
+    taux_extremes = 100 * n_produits_extremes / n_rayons_connus if n_rayons_connus else 0
 
     # ---------------------------------------------------------
     # 2. Mise en page générale
@@ -723,7 +661,8 @@ def tracer_synthese_qualite(
     fig = plt.figure(figsize=(14, 8), facecolor="white")
 
     fig.text(
-        0.07, 0.94,
+        0.07,
+        0.94,
         "Synthèse de la qualité des données",
         fontsize=21,
         fontweight="bold",
@@ -731,7 +670,8 @@ def tracer_synthese_qualite(
         ha="left",
     )
     fig.text(
-        0.07, 0.895,
+        0.07,
+        0.895,
         "Couverture du périmètre, disponibilité nutritionnelle et contrôles de cohérence",
         fontsize=10.5,
         color="#666666",
@@ -747,7 +687,8 @@ def tracer_synthese_qualite(
     ax_couverture.axis("off")
 
     ax_couverture.text(
-        0.00, 0.90,
+        0.00,
+        0.90,
         "COUVERTURE DU PÉRIMÈTRE",
         fontsize=9,
         fontweight="bold",
@@ -756,7 +697,8 @@ def tracer_synthese_qualite(
     )
 
     ax_couverture.text(
-        0.00, 0.48,
+        0.00,
+        0.48,
         f"{total:,}".replace(",", " "),
         fontsize=22,
         fontweight="bold",
@@ -764,7 +706,8 @@ def tracer_synthese_qualite(
         va="center",
     )
     ax_couverture.text(
-        0.00, 0.12,
+        0.00,
+        0.12,
         "Produits initiaux",
         fontsize=10,
         color="#666666",
@@ -772,7 +715,8 @@ def tracer_synthese_qualite(
     )
 
     ax_couverture.text(
-        0.30, 0.48,
+        0.30,
+        0.48,
         "→",
         fontsize=23,
         color="#999999",
@@ -781,7 +725,8 @@ def tracer_synthese_qualite(
     )
 
     ax_couverture.text(
-        0.39, 0.48,
+        0.39,
+        0.48,
         f"{n_rayons_connus:,}".replace(",", " "),
         fontsize=22,
         fontweight="bold",
@@ -789,7 +734,8 @@ def tracer_synthese_qualite(
         va="center",
     )
     ax_couverture.text(
-        0.39, 0.12,
+        0.39,
+        0.12,
         "Produits avec un rayon exploitable",
         fontsize=10,
         color="#666666",
@@ -797,7 +743,8 @@ def tracer_synthese_qualite(
     )
 
     ax_couverture.text(
-        1.00, 0.48,
+        1.00,
+        0.48,
         f"{taux_couverture:.1f} %",
         fontsize=22,
         fontweight="bold",
@@ -806,7 +753,8 @@ def tracer_synthese_qualite(
         ha="right",
     )
     ax_couverture.text(
-        1.00, 0.12,
+        1.00,
+        0.12,
         "Taux de couverture",
         fontsize=10,
         color="#666666",
@@ -841,7 +789,8 @@ def tracer_synthese_qualite(
     ax_completude.axis("off")
 
     ax_completude.text(
-        0.00, 0.95,
+        0.00,
+        0.95,
         "COMPLÉTUDE NUTRITIONNELLE",
         fontsize=9,
         fontweight="bold",
@@ -849,7 +798,8 @@ def tracer_synthese_qualite(
         va="top",
     )
     ax_completude.text(
-        0.00, 0.48,
+        0.00,
+        0.48,
         f"{n_complets:,}".replace(",", " "),
         fontsize=22,
         fontweight="bold",
@@ -857,14 +807,16 @@ def tracer_synthese_qualite(
         va="center",
     )
     ax_completude.text(
-        0.15, 0.48,
+        0.15,
+        0.48,
         f"produits avec les {len(eda_lib.NUTRIMENTS_CLES)} nutriments clés renseignés",
         fontsize=11,
         color="#555555",
         va="center",
     )
     ax_completude.text(
-        1.00, 0.48,
+        1.00,
+        0.48,
         f"{taux_completude:.1f} %",
         fontsize=22,
         fontweight="bold",
@@ -873,7 +825,8 @@ def tracer_synthese_qualite(
         ha="right",
     )
     ax_completude.text(
-        1.00, 0.12,
+        1.00,
+        0.12,
         f"Sur {n_rayons_connus:,} produits avec rayon".replace(",", " "),
         fontsize=9,
         color="#666666",
@@ -883,9 +836,7 @@ def tracer_synthese_qualite(
 
     # Barre de complétude
     ax_barre_completude = fig.add_axes([0.07, 0.425, 0.86, 0.012])
-    ax_barre_completude.barh(
-        0, 1, height=1, color="#EAEAEA"
-    )
+    ax_barre_completude.barh(0, 1, height=1, color="#EAEAEA")
     ax_barre_completude.barh(
         0,
         taux_completude / 100,
@@ -900,7 +851,8 @@ def tracer_synthese_qualite(
     # 5. Deux diagnostics complémentaires
     # ---------------------------------------------------------
     fig.text(
-        0.07, 0.355,
+        0.07,
+        0.355,
         "CONTRÔLES DE QUALITÉ",
         fontsize=9,
         fontweight="bold",
@@ -926,7 +878,8 @@ def tracer_synthese_qualite(
     ax_energie.axis("off")
 
     ax_energie.text(
-        0.00, 0.95,
+        0.00,
+        0.95,
         "Incohérences énergétiques",
         fontsize=12,
         fontweight="bold",
@@ -934,7 +887,8 @@ def tracer_synthese_qualite(
         va="top",
     )
     ax_energie.text(
-        0.00, 0.58,
+        0.00,
+        0.58,
         f"{n_ecarts_importants:,}".replace(",", " "),
         fontsize=25,
         fontweight="bold",
@@ -942,16 +896,17 @@ def tracer_synthese_qualite(
         va="center",
     )
     ax_energie.text(
-        0.00, 0.30,
+        0.00,
+        0.30,
         f"sur {n_evaluables:,} produits évaluables".replace(",", " "),
         fontsize=10,
         color="#555555",
         va="center",
     )
     ax_energie.text(
-        0.00, 0.08,
-        f"{taux_ecarts:.1f} % avec un écart supérieur à "
-        f"{eda_lib.ECART_ENERGIE_KCAL:.0f} kcal/100 g",
+        0.00,
+        0.08,
+        f"{taux_ecarts:.1f} % avec un écart supérieur à {eda_lib.ECART_ENERGIE_KCAL:.0f} kcal/100 g",
         fontsize=9,
         color="#666666",
         va="center",
@@ -964,7 +919,8 @@ def tracer_synthese_qualite(
     ax_extremes.axis("off")
 
     ax_extremes.text(
-        0.00, 0.95,
+        0.00,
+        0.95,
         "Produits avec valeurs extrêmes",
         fontsize=12,
         fontweight="bold",
@@ -972,7 +928,8 @@ def tracer_synthese_qualite(
         va="top",
     )
     ax_extremes.text(
-        0.00, 0.58,
+        0.00,
+        0.58,
         f"{n_produits_extremes:,}".replace(",", " "),
         fontsize=25,
         fontweight="bold",
@@ -980,20 +937,22 @@ def tracer_synthese_qualite(
         va="center",
     )
     ax_extremes.text(
-        0.00, 0.30,
+        0.00,
+        0.30,
         f"sur {n_rayons_connus:,} produits avec rayon".replace(",", " "),
         fontsize=10,
         color="#555555",
         va="center",
     )
     ax_extremes.text(
-        0.00, 0.08,
+        0.00,
+        0.08,
         f"{taux_extremes:.1f} % concernés — un signal n'est pas une preuve d'erreur",
         fontsize=9,
         color="#666666",
         va="center",
     )
-     # ---------------------------------------------------------
+    # ---------------------------------------------------------
     # Séparateurs entre les grandes sections
     # ---------------------------------------------------------
     for y in (0.635, 0.395):

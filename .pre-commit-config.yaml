@@ -1,0 +1,23 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: Vérification Ruff
+        entry: uv run ruff check src tests
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: Vérification du formatage Ruff
+        entry: uv run ruff format --check src tests
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: pytest
+        name: Tests pytest
+        entry: uv run pytest
+        language: system
+        types: [python]
+        pass_filenames: false
