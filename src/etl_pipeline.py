@@ -1,11 +1,11 @@
 """Préparation commune du périmètre France, du rapport et des fichiers SQL."""
 
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 import duckdb
 import numpy as np
 import pandas as pd
-from decimal import Decimal, ROUND_HALF_UP
 
 try:  # module `src.*` depuis la racine ou modules frères depuis `src/`
     from src.cleaning import nettoyer
@@ -21,9 +21,7 @@ def _sql_chaine(chemin: Path) -> str:
 
 
 def _colonnes_source(connexion: duckdb.DuckDBPyConnection, source: Path) -> set[str]:
-    return set(connexion.execute(
-        f"DESCRIBE SELECT * FROM read_parquet('{_sql_chaine(source)}')"
-    ).df()["column_name"])
+    return set(connexion.execute(f"DESCRIBE SELECT * FROM read_parquet('{_sql_chaine(source)}')").df()["column_name"])
 
 
 def extraire_brut(source: str | Path, destination: str | Path) -> pd.DataFrame:
@@ -48,10 +46,16 @@ def extraire_brut(source: str | Path, destination: str | Path) -> pd.DataFrame:
             return f'"{colonne}" AS "{nom}"' if colonne in colonnes else f'NULL AS "{nom}"'
 
         selections = [
-            champ("code"), champ("completeness"), champ("created_t"),
-            champ("last_modified_t"), champ("additives_n"), champ("nova_group"),
-            champ("nutriscore_grade"), champ("nutriscore_score"),
-            champ("food_groups_tags"), champ("pnns_groups_1"),
+            champ("code"),
+            champ("completeness"),
+            champ("created_t"),
+            champ("last_modified_t"),
+            champ("additives_n"),
+            champ("nova_group"),
+            champ("nutriscore_grade"),
+            champ("nutriscore_score"),
+            champ("food_groups_tags"),
+            champ("pnns_groups_1"),
             # Frontière explicite : les règles existantes utilisent les noms OFF.
             champ("product_name", "product_name"),
             champ("brands_tags", "brands_tags"),
@@ -73,13 +77,11 @@ def extraire_brut(source: str | Path, destination: str | Path) -> pd.DataFrame:
             for cible, nom in nutriments.items()
         )
         requete = f"""
-            SELECT {', '.join(selections)}
+            SELECT {", ".join(selections)}
             FROM read_parquet('{_sql_chaine(source)}')
             WHERE 'en:france' IN countries_tags
         """
-        connexion.execute(
-            f"COPY ({requete}) TO '{_sql_chaine(destination)}' (FORMAT PARQUET)"
-        )
+        connexion.execute(f"COPY ({requete}) TO '{_sql_chaine(destination)}' (FORMAT PARQUET)")
     finally:
         connexion.close()
 
@@ -107,11 +109,15 @@ def vers_tables_sql(propre: pd.DataFrame) -> dict[str, pd.DataFrame]:
     produits = propre[["code", "completeness", "name", "brand_name", "nutriscore_grade", "nutriscore_score"]].copy()
     produits["code"] = produits["code"].astype("string")
     produits["nutriscore_grade"] = produits["nutriscore_grade"].replace({"": None})
-    produits.loc[~produits["nutriscore_grade"].isin(
-        ["a", "b", "c", "d", "e", "not-applicable", "unknown"]
-    ), "nutriscore_grade"] = pd.NA
-    marques = (produits.loc[produits["brand_name"].notna(), ["brand_name"]]
-               .drop_duplicates().rename(columns={"brand_name": "name"}).reset_index(drop=True))
+    produits.loc[
+        ~produits["nutriscore_grade"].isin(["a", "b", "c", "d", "e", "not-applicable", "unknown"]), "nutriscore_grade"
+    ] = pd.NA
+    marques = (
+        produits.loc[produits["brand_name"].notna(), ["brand_name"]]
+        .drop_duplicates()
+        .rename(columns={"brand_name": "name"})
+        .reset_index(drop=True)
+    )
 
     relations = []
     for code, tags in propre[["code", "food_groups_tags"]].itertuples(index=False, name=None):
@@ -121,10 +127,14 @@ def vers_tables_sql(propre: pd.DataFrame) -> dict[str, pd.DataFrame]:
     categories = pc[["tag"]].drop_duplicates().reset_index(drop=True)
 
     nutrition_source_vers_sql = {
-        "energy_100g": "energy", "energy-kcal_100g": "energy_kcal",
-        "proteins_100g": "proteins", "carbohydrates_100g": "carbohydrates",
-        "sugars_100g": "sugars", "fat_100g": "fat",
-        "saturated-fat_100g": "saturated_fat", "fiber_100g": "fiber",
+        "energy_100g": "energy",
+        "energy-kcal_100g": "energy_kcal",
+        "proteins_100g": "proteins",
+        "carbohydrates_100g": "carbohydrates",
+        "sugars_100g": "sugars",
+        "fat_100g": "fat",
+        "saturated-fat_100g": "saturated_fat",
+        "fiber_100g": "fiber",
         "salt_100g": "salt",
     }
     nutriments = propre[["code", *nutrition_source_vers_sql]].rename(columns=nutrition_source_vers_sql).copy()
@@ -136,14 +146,13 @@ def vers_tables_sql(propre: pd.DataFrame) -> dict[str, pd.DataFrame]:
         nutriments.loc[~nutriments[colonne].between(0, 100), colonne] = pd.NA
     for colonne in ["energy", "energy_kcal"]:
         nutriments.loc[~nutriments[colonne].between(0, 99999.99), colonne] = pd.NA
+
     def arrondir_sql(valeur):
         if pd.isna(valeur):
             return pd.NA
         return float(Decimal(str(valeur)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
 
-    nutriments[colonnes_num] = nutriments[colonnes_num].apply(
-        lambda colonne: colonne.map(arrondir_sql)
-    )
+    nutriments[colonnes_num] = nutriments[colonnes_num].apply(lambda colonne: colonne.map(arrondir_sql))
 
     return {
         # brand_name est consommée par insert_products pour résoudre brand_id.
@@ -155,8 +164,7 @@ def vers_tables_sql(propre: pd.DataFrame) -> dict[str, pd.DataFrame]:
     }
 
 
-def preparer_pipeline(source="data/food.parquet", repertoire="data/extracts",
-                      rapport="docs/data/rapport_nettoyage.md"):
+def preparer_pipeline(source="data/food.parquet", repertoire="data/extracts", rapport="docs/data/rapport_nettoyage.md"):
     """Exécute une fois extraction → TP9 → rapport → cinq fichiers SQL."""
     repertoire = Path(repertoire)
     brut = extraire_brut(source, repertoire / "france_brut.parquet")

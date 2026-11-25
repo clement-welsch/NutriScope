@@ -64,17 +64,21 @@ def preparer(propre: pd.DataFrame) -> pd.DataFrame:
     rayon = pnns.fillna(groupes.map(lambda g: _niveau(g, 0))).fillna(RAYON_INCONNU)
 
     marques = propre["brands_tags"] if "brands_tags" in propre else propre.get("brands")
-    table = pd.DataFrame({
-        "code": propre["code"],
-        "product_name": propre["product_name"].map(_nom),
-        "brand": marques.map(lambda m: next(iter(_liste(m)), None)) if marques is not None else None,
-        "sous_rayon": propre.get("pnns_groups_2", pd.Series(None, index=propre.index)).map(slug)
-                      .fillna(groupes.map(lambda g: _niveau(g, 1))),
-        "rayon": rayon,
-    }, index=propre.index)
+    table = pd.DataFrame(
+        {
+            "code": propre["code"],
+            "product_name": propre["product_name"].map(_nom),
+            "brand": marques.map(lambda m: next(iter(_liste(m)), None)) if marques is not None else None,
+            "sous_rayon": propre.get("pnns_groups_2", pd.Series(None, index=propre.index))
+            .map(slug)
+            .fillna(groupes.map(lambda g: _niveau(g, 1))),
+            "rayon": rayon,
+        },
+        index=propre.index,
+    )
     for colonne in SCHEMA:
         if colonne not in table:
-            table[colonne] = propre[colonne] if colonne in propre else np.nan
+            table[colonne] = propre.get(colonne, np.nan)
     return table[list(SCHEMA) + ["rayon"]]
 
 

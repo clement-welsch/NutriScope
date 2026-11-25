@@ -27,11 +27,13 @@ def lire_requetes(chemin: str | Path = SQL_CONTROLES) -> dict[str, str]:
     requetes = {}
     for i, m in enumerate(marqueurs):
         fin = marqueurs[i + 1].start() if i + 1 < len(marqueurs) else len(texte)
-        requetes[m.group(1)] = texte[m.end():fin].strip()
+        requetes[m.group(1)] = texte[m.end() : fin].strip()
     return requetes
 
 
-def executer(dossier_parquet: str | Path = PARQUET_PRODUITS, chemin_sql: str | Path = SQL_CONTROLES) -> dict[str, pd.DataFrame]:
+def executer(
+    dossier_parquet: str | Path = PARQUET_PRODUITS, chemin_sql: str | Path = SQL_CONTROLES
+) -> dict[str, pd.DataFrame]:
     """Crée la vue `produits`, exécute chaque requête, renvoie {nom: DataFrame}."""
     connexion = duckdb.connect()
     try:
@@ -52,15 +54,17 @@ def _cellule(valeur) -> str:
 
 
 def tableau_markdown(table: pd.DataFrame) -> str:
-    lignes = ["| " + " | ".join(map(str, table.columns)) + " |",
-              "|" + "|".join("---" for _ in table.columns) + "|"]
+    lignes = ["| " + " | ".join(map(str, table.columns)) + " |", "|" + "|".join("---" for _ in table.columns) + "|"]
     for _, ligne in table.iterrows():
         lignes.append("| " + " | ".join(_cellule(v) for v in ligne) + " |")
     return "\n".join(lignes)
 
 
-def ecrire_rapport(resultats: dict[str, pd.DataFrame], chemin_md: str | Path = DOCS_DATA / "controle.md",
-                   source: str = "data/parquet/produits") -> None:
+def ecrire_rapport(
+    resultats: dict[str, pd.DataFrame],
+    chemin_md: str | Path = DOCS_DATA / "controle.md",
+    source: str = "data/parquet/produits",
+) -> None:
     """Un tableau Markdown par contrôle."""
     parties = [
         "# Contrôles qualité sur le Parquet (TP 12)",

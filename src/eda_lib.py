@@ -16,22 +16,33 @@ GRAINE = 42
 
 # les sept nutriments clés du module 3.3 (les fibres, à 59 % de manquants, n'en font pas partie)
 NUTRIMENTS_CLES = [
-    "energy-kcal_100g", "fat_100g", "saturated-fat_100g", "carbohydrates_100g",
-    "sugars_100g", "proteins_100g", "salt_100g",
+    "energy-kcal_100g",
+    "fat_100g",
+    "saturated-fat_100g",
+    "carbohydrates_100g",
+    "sugars_100g",
+    "proteins_100g",
+    "salt_100g",
 ]
 # toutes les colonnes en g pour 100 g (l'énergie a sa propre borne)
 COLONNES_G_100G = [
-    "fat_100g", "saturated-fat_100g", "carbohydrates_100g", "sugars_100g",
-    "fiber_100g", "proteins_100g", "salt_100g", "sodium_100g",
+    "fat_100g",
+    "saturated-fat_100g",
+    "carbohydrates_100g",
+    "sugars_100g",
+    "fiber_100g",
+    "proteins_100g",
+    "salt_100g",
+    "sodium_100g",
     "fruits-vegetables-legumes_100g",
 ]
 NUTRIMENT_MAX_G = 100.0
 KCAL_MAX = 900.0
 # seuils des incohérences métier (les trois premiers sont ceux de src/cleaning.py)
-TOLERANCE_SOUS_TOTAL_G = 0.5   # sucres ≤ glucides + 0,5 ; saturés ≤ lipides + 0,5
+TOLERANCE_SOUS_TOTAL_G = 0.5  # sucres ≤ glucides + 0,5 ; saturés ≤ lipides + 0,5
 SEL_PAR_SODIUM = 2.5
 TOLERANCE_SEL_SODIUM = 0.1
-ECART_ENERGIE_KCAL = 150.0     # écart toléré entre énergie déclarée et calculée
+ECART_ENERGIE_KCAL = 150.0  # écart toléré entre énergie déclarée et calculée
 CIBLE = "nutriscore_score"
 RAYON = "pnns_groups_1"
 RAYON_INCONNU = "unknown"
@@ -41,6 +52,7 @@ GRADES = ["a", "b", "c", "d", "e"]
 # ============================================================
 # 0. Données
 # ============================================================
+
 
 def nettoyage_minimal(df: pd.DataFrame) -> pd.DataFrame:
     """Nettoyage minimal du module 3.3, utilisé tant que le TP 9 n'est pas terminé.
@@ -72,6 +84,7 @@ def rayons_connus(df: pd.DataFrame) -> pd.DataFrame:
 # 1. Distributions par rayon
 # ============================================================
 
+
 def resume_univarie(s: pd.Series) -> pd.Series:
     """Résumé d'une variable numérique, calculé sur les valeurs présentes.
 
@@ -81,13 +94,26 @@ def resume_univarie(s: pd.Series) -> pd.Series:
     """
     x = s.dropna()
     p05, q1, mediane, q3, p95 = x.quantile([0.05, 0.25, 0.5, 0.75, 0.95])
-    return pd.Series({
-        "n": len(x), "manquants": int(s.isna().sum()),
-        "moyenne": x.mean(), "mediane": mediane, "ecart_type": x.std(),
-        "IQR": q3 - q1, "MAD": stats.median_abs_deviation(x),
-        "CV": x.std() / x.mean(), "asymetrie": x.skew(), "aplatissement": x.kurt(),
-        "p05": p05, "Q1": q1, "Q3": q3, "p95": p95, "min": x.min(), "max": x.max(),
-    })
+    return pd.Series(
+        {
+            "n": len(x),
+            "manquants": int(s.isna().sum()),
+            "moyenne": x.mean(),
+            "mediane": mediane,
+            "ecart_type": x.std(),
+            "IQR": q3 - q1,
+            "MAD": stats.median_abs_deviation(x),
+            "CV": x.std() / x.mean(),
+            "asymetrie": x.skew(),
+            "aplatissement": x.kurt(),
+            "p05": p05,
+            "Q1": q1,
+            "Q3": q3,
+            "p95": p95,
+            "min": x.min(),
+            "max": x.max(),
+        }
+    )
 
 
 def _effectifs_par_rayon(df: pd.DataFrame, colonnes: list[str]) -> pd.DataFrame:
@@ -111,8 +137,17 @@ def profil_par_rayon(df: pd.DataFrame, colonnes: list[str], min_n: int = 30) -> 
             if len(x) < min_n:
                 continue
             q1, mediane, q3 = x.quantile([0.25, 0.5, 0.75])
-            lignes.append({"nutriment": colonne, "rayon": rayon, "n": len(x),
-                           "Q1": q1, "mediane": mediane, "Q3": q3, "moyenne": x.mean()})
+            lignes.append(
+                {
+                    "nutriment": colonne,
+                    "rayon": rayon,
+                    "n": len(x),
+                    "Q1": q1,
+                    "mediane": mediane,
+                    "Q3": q3,
+                    "moyenne": x.mean(),
+                }
+            )
     colonnes_sortie = ["nutriment", "rayon", "n", "Q1", "mediane", "Q3", "moyenne"]
     return pd.DataFrame(lignes, columns=colonnes_sortie).set_index(["nutriment", "rayon"])
 
@@ -157,6 +192,7 @@ def v_cramer(table: pd.DataFrame) -> float:
 # 2. Complétude et qualité
 # ============================================================
 
+
 def completude_par_groupe(df: pd.DataFrame, groupe: str, colonnes: list[str], min_n: int = 20) -> pd.DataFrame:
     """Complétude par groupe (rayon, marque…), en %, avec l'effectif `n`.
 
@@ -189,13 +225,15 @@ def incoherences_metier(df: pd.DataFrame) -> pd.DataFrame:
     """
     kcal = df["energy-kcal_100g"]
     macro_positif = (df[["carbohydrates_100g", "proteins_100g", "fat_100g"]] > 0).any(axis=1)
-    return pd.DataFrame({
-        "sucres_sup_glucides": df["sugars_100g"] > df["carbohydrates_100g"] + TOLERANCE_SOUS_TOTAL_G,
-        "satures_sup_lipides": df["saturated-fat_100g"] > df["fat_100g"] + TOLERANCE_SOUS_TOTAL_G,
-        "sel_different_sodium": (df["salt_100g"] - SEL_PAR_SODIUM * df["sodium_100g"]).abs() > TOLERANCE_SEL_SODIUM,
-        "energie_ecart_449": (kcal - energie_calculee(df)).abs() > ECART_ENERGIE_KCAL,
-        "energie_nulle_macros": (kcal == 0) & macro_positif,
-    })
+    return pd.DataFrame(
+        {
+            "sucres_sup_glucides": df["sugars_100g"] > df["carbohydrates_100g"] + TOLERANCE_SOUS_TOTAL_G,
+            "satures_sup_lipides": df["saturated-fat_100g"] > df["fat_100g"] + TOLERANCE_SOUS_TOTAL_G,
+            "sel_different_sodium": (df["salt_100g"] - SEL_PAR_SODIUM * df["sodium_100g"]).abs() > TOLERANCE_SEL_SODIUM,
+            "energie_ecart_449": (kcal - energie_calculee(df)).abs() > ECART_ENERGIE_KCAL,
+            "energie_nulle_macros": (kcal == 0) & macro_positif,
+        }
+    )
 
 
 def energie_calculee(df: pd.DataFrame) -> pd.Series:
@@ -207,10 +245,11 @@ def energie_calculee(df: pd.DataFrame) -> pd.Series:
 # 3. Corrélations
 # ============================================================
 
+
 def _pearson_spearman(x: pd.Series, y: pd.Series) -> tuple[float, float]:
     """(Pearson, Spearman) de deux séries sans manquants ; NaN si l'une est constante."""
     if x.nunique() < 2 or y.nunique() < 2:
-        return np.nan, np.nan   # corrélation non définie : scipy renverrait NaN avec un avertissement
+        return np.nan, np.nan  # corrélation non définie : scipy renverrait NaN avec un avertissement
     return float(stats.pearsonr(x, y)[0]), float(stats.spearmanr(x, y)[0])
 
 
@@ -265,8 +304,9 @@ def correlations_par_rayon(df: pd.DataFrame, colonne: str, cible: str, min_n: in
         paires = groupe[[colonne, cible]].dropna()
         if len(paires) < min_n:
             continue
-        lignes.append({"rayon": rayon, "n": len(paires),
-                       "spearman": _pearson_spearman(paires[colonne], paires[cible])[1]})
+        lignes.append(
+            {"rayon": rayon, "n": len(paires), "spearman": _pearson_spearman(paires[colonne], paires[cible])[1]}
+        )
     table = pd.DataFrame(lignes, columns=["rayon", "n", "spearman"]).set_index("rayon")
     return table.sort_values("spearman", ascending=False)
 
@@ -274,6 +314,7 @@ def correlations_par_rayon(df: pd.DataFrame, colonne: str, cible: str, min_n: in
 # ============================================================
 # 4. Extrêmes restants
 # ============================================================
+
 
 def zscore_robuste(s: pd.Series) -> pd.Series:
     """Écart à la médiane en nombre de MAD (0,6745 × (x − médiane) / MAD).
@@ -288,7 +329,7 @@ def zscore_robuste(s: pd.Series) -> pd.Series:
     """
     x = s.astype("float64")
     mad = stats.median_abs_deviation(x.dropna())
-    if not mad > 0:   # MAD nulle ou série vide (comparaison fausse avec NaN aussi)
+    if not mad > 0:  # MAD nulle ou série vide (comparaison fausse avec NaN aussi)
         return pd.Series(np.nan, index=s.index)
     return 0.6745 * (x - x.median()) / mad
 
@@ -308,12 +349,20 @@ def extremes_restants(df: pd.DataFrame, colonnes: list[str], seuil: float = 3.5)
         par_rayon = df.groupby(RAYON, observed=True)[colonne]
         z = par_rayon.transform(zscore_robuste)
         mediane = par_rayon.transform("median")
-        extremes = z.abs() > seuil          # False pour les NaN : manquants et groupes à MAD nulle
-        morceaux.append(pd.DataFrame({
-            "code": df.loc[extremes, "code"], "product_name": df.loc[extremes, "product_name"],
-            "rayon": df.loc[extremes, RAYON], "nutriment": colonne, "valeur": df.loc[extremes, colonne],
-            "mediane_rayon": mediane[extremes], "z": z[extremes],
-        }))
+        extremes = z.abs() > seuil  # False pour les NaN : manquants et groupes à MAD nulle
+        morceaux.append(
+            pd.DataFrame(
+                {
+                    "code": df.loc[extremes, "code"],
+                    "product_name": df.loc[extremes, "product_name"],
+                    "rayon": df.loc[extremes, RAYON],
+                    "nutriment": colonne,
+                    "valeur": df.loc[extremes, colonne],
+                    "mediane_rayon": mediane[extremes],
+                    "z": z[extremes],
+                }
+            )
+        )
     resultat = pd.concat(morceaux, ignore_index=True).reindex(columns=colonnes_sortie)
     return resultat.sort_values("z", key=abs, ascending=False, kind="stable").reset_index(drop=True)
 
@@ -321,6 +370,7 @@ def extremes_restants(df: pd.DataFrame, colonnes: list[str], seuil: float = 3.5)
 # ============================================================
 # 5. Hypothèses
 # ============================================================
+
 
 def comparer_deux_groupes(a: pd.Series, b: pd.Series) -> pd.Series:
     """Compare une variable numérique entre deux groupes : médianes, d de Cohen, Mann-Whitney.
@@ -343,8 +393,18 @@ def comparer_deux_groupes(a: pd.Series, b: pd.Series) -> pd.Series:
     a, b = a.dropna(), b.dropna()
     na, nb = len(a), len(b)
     if na == 0 or nb == 0:
-        return pd.Series({"n_a": na, "n_b": nb, "mediane_a": np.nan, "mediane_b": np.nan,
-                          "diff_medianes": np.nan, "d_cohen": np.nan, "U": np.nan, "p_value": np.nan})
+        return pd.Series(
+            {
+                "n_a": na,
+                "n_b": nb,
+                "mediane_a": np.nan,
+                "mediane_b": np.nan,
+                "diff_medianes": np.nan,
+                "d_cohen": np.nan,
+                "U": np.nan,
+                "p_value": np.nan,
+            }
+        )
     if na + nb > 2:
         var_regroupee = ((na - 1) * a.var(ddof=1) + (nb - 1) * b.var(ddof=1)) / (na + nb - 2)
         ecart_type = np.sqrt(var_regroupee)
@@ -352,11 +412,18 @@ def comparer_deux_groupes(a: pd.Series, b: pd.Series) -> pd.Series:
         ecart_type = 0.0
     d = float((a.mean() - b.mean()) / ecart_type) if ecart_type > 0 else np.nan
     if a.nunique() < 2 and b.nunique() < 2 and a.iloc[0] == b.iloc[0]:
-        u, p = np.nan, np.nan        # deux groupes constants et identiques : rien à départager
+        u, p = np.nan, np.nan  # deux groupes constants et identiques : rien à départager
     else:
         u, p = stats.mannwhitneyu(a, b, alternative="two-sided", method="asymptotic")
-    return pd.Series({
-        "n_a": na, "n_b": nb,
-        "mediane_a": a.median(), "mediane_b": b.median(), "diff_medianes": a.median() - b.median(),
-        "d_cohen": d, "U": float(u), "p_value": float(p),
-    })
+    return pd.Series(
+        {
+            "n_a": na,
+            "n_b": nb,
+            "mediane_a": a.median(),
+            "mediane_b": b.median(),
+            "diff_medianes": a.median() - b.median(),
+            "d_cohen": d,
+            "U": float(u),
+            "p_value": float(p),
+        }
+    )

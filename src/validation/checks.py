@@ -1,11 +1,11 @@
 from pathlib import Path
 
 try:
-    from src.config.settings import INPUT_DIR, REQUIRED_FILES, POSTGRES_DB_ALIAS
-    from src.utils.timer import timer, print_duration
+    from src.config.settings import INPUT_DIR, POSTGRES_DB_ALIAS, REQUIRED_FILES
+    from src.utils.timer import print_duration, timer
 except ModuleNotFoundError:  # exécution de src/load_database.py
-    from config.settings import INPUT_DIR, REQUIRED_FILES, POSTGRES_DB_ALIAS
-    from utils.timer import timer, print_duration
+    from config.settings import INPUT_DIR, POSTGRES_DB_ALIAS, REQUIRED_FILES
+    from utils.timer import print_duration, timer
 
 
 def check_input_files():
@@ -13,11 +13,7 @@ def check_input_files():
     Vérifie que tous les fichiers Parquet nécessaires existent.
     """
 
-    missing_files = [
-        INPUT_DIR / filename
-        for filename in REQUIRED_FILES
-        if not (INPUT_DIR / filename).exists()
-    ]
+    missing_files = [INPUT_DIR / filename for filename in REQUIRED_FILES if not (INPUT_DIR / filename).exists()]
 
     if missing_files:
         print("Erreur : fichiers Parquet manquants :")
@@ -25,9 +21,7 @@ def check_input_files():
         for path in missing_files:
             print(f"  - {path}")
 
-        raise FileNotFoundError(
-            "Certains fichiers Parquet sont absents."
-        )
+        raise FileNotFoundError("Certains fichiers Parquet sont absents.")
 
 
 def check_product_codes_unique(connection, parquet_path: str | Path | None = None):
@@ -59,11 +53,7 @@ def check_product_codes_unique(connection, parquet_path: str | Path | None = Non
         erreurs.append(f"{lignes_dupliquees} {nom}")
 
     if erreurs:
-        raise ValueError(
-            "Chargement annulé avant le vidage de la base : "
-            + "; ".join(erreurs)
-            + "."
-        )
+        raise ValueError("Chargement annulé avant le vidage de la base : " + "; ".join(erreurs) + ".")
 
     print("Les codes produits sont présents et uniques.")
 
@@ -126,7 +116,6 @@ def final_check(connection):
     ]
 
     for table in tables:
-
         count = connection.execute(
             f"""
             SELECT COUNT(*)
@@ -134,7 +123,4 @@ def final_check(connection):
             """
         ).fetchone()[0]
 
-        print(
-            f"{table:25} {count:>12,} lignes"
-            .replace(",", " ")
-        )
+        print(f"{table:25} {count:>12,} lignes".replace(",", " "))

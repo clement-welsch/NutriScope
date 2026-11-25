@@ -1,6 +1,7 @@
 """Tests unitaires des fonctions de visualisation du TP11."""
 
 import matplotlib
+
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
@@ -10,10 +11,10 @@ import pytest
 
 from src import eda_lib, viz
 
-
 # ---------------------------------------------------------------------
 # Fixtures et données synthétiques
 # ---------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def fermer_figures():
@@ -50,7 +51,14 @@ def produits_nutriscore():
                 "Fruits and vegetables",
             ],
             "nutriscore_grade": [
-                "a", "d", "e", "a", "b", "c", "unknown", None,
+                "a",
+                "d",
+                "e",
+                "a",
+                "b",
+                "c",
+                "unknown",
+                None,
             ],
         }
     )
@@ -174,10 +182,7 @@ def perimetre():
                 eda_lib.RAYON_INCONNU,
                 None,
             ],
-            **{
-                nutriment: [1.0, 2.0, np.nan, 3.0, 4.0]
-                for nutriment in eda_lib.NUTRIMENTS_CLES
-            },
+            **{nutriment: [1.0, 2.0, np.nan, 3.0, 4.0] for nutriment in eda_lib.NUTRIMENTS_CLES},
         }
     )
 
@@ -185,6 +190,7 @@ def perimetre():
 # ---------------------------------------------------------------------
 # 1. Médianes de sucres par rayon
 # ---------------------------------------------------------------------
+
 
 def test_tracer_medianes_sucres_retourne_figure_et_axes(profil_sucres):
     fig, ax = viz.tracer_medianes_sucres(profil_sucres)
@@ -234,6 +240,7 @@ def test_tracer_medianes_sucres_refuse_colonne_manquante():
 # 2. Grades Nutri-Score mis en avant
 # ---------------------------------------------------------------------
 
+
 def test_tracer_grades_mis_en_avant_retourne_figure_et_axes(
     produits_nutriscore,
 ):
@@ -253,10 +260,7 @@ def test_tracer_grades_mis_en_avant_normalise_les_proportions(
         assert len(conteneur) == 2
 
     for position in range(2):
-        total = sum(
-            conteneur[position].get_width()
-            for conteneur in ax.containers
-        )
+        total = sum(conteneur[position].get_width() for conteneur in ax.containers)
         assert total == pytest.approx(100.0)
 
 
@@ -293,6 +297,7 @@ def test_tracer_grades_mis_en_avant_refuse_colonne_manquante():
 # ---------------------------------------------------------------------
 # 3. Couverture des rayons
 # ---------------------------------------------------------------------
+
 
 def test_tracer_couverture_rayons_retourne_figure_et_axes(
     produits_rayons,
@@ -333,6 +338,7 @@ def test_tracer_couverture_rayons_refuse_colonne_manquante():
 # 4. Complétude nutritionnelle par rayon
 # ---------------------------------------------------------------------
 
+
 def test_tracer_completude_rayons_retourne_figure_et_axes(completude):
     fig, ax = viz.tracer_completude_rayons(completude)
 
@@ -350,15 +356,11 @@ def test_tracer_completude_rayons_estime_effectifs(completude):
     # 3. Fiches complètes : 30, 80
     largeurs = [barre.get_width() for barre in ax.patches]
 
-    assert largeurs == pytest.approx(
-        [50, 100, 35, 90, 30, 80]
-    )
+    assert largeurs == pytest.approx([50, 100, 35, 90, 30, 80])
 
 
 def test_tracer_completude_rayons_refuse_donnees_vides():
-    donnees = pd.DataFrame(
-        columns=["n", "fiches_completes", "score_present"]
-    )
+    donnees = pd.DataFrame(columns=["n", "fiches_completes", "score_present"])
 
     with pytest.raises(ValueError, match="Aucune donnée"):
         viz.tracer_completude_rayons(donnees)
@@ -388,6 +390,7 @@ def test_tracer_completude_rayons_refuse_colonne_manquante():
 # ---------------------------------------------------------------------
 # 5. Écarts énergétiques
 # ---------------------------------------------------------------------
+
 
 def test_tracer_ecarts_energetiques_retourne_figure_et_axes(comparables):
     fig, ax = viz.tracer_ecarts_energetiques(comparables)
@@ -420,9 +423,7 @@ def test_tracer_ecarts_energetiques_refuse_aucun_ecart():
 
 
 def test_tracer_ecarts_energetiques_refuse_colonne_manquante():
-    donnees = pd.DataFrame(
-        {"product_name": ["Produit A"]}
-    )
+    donnees = pd.DataFrame({"product_name": ["Produit A"]})
 
     with pytest.raises(ValueError, match="colonnes manquantes"):
         viz.tracer_ecarts_energetiques(donnees)
@@ -431,6 +432,7 @@ def test_tracer_ecarts_energetiques_refuse_colonne_manquante():
 # ---------------------------------------------------------------------
 # 6. Bilan des valeurs extrêmes
 # ---------------------------------------------------------------------
+
 
 def test_tracer_bilan_valeurs_extremes_retourne_figure_et_axes(
     donnees_extremes,
@@ -517,6 +519,7 @@ def test_tracer_bilan_valeurs_extremes_refuse_rayons_vides(
 # 7. Synthèse de la qualité
 # ---------------------------------------------------------------------
 
+
 def test_tracer_synthese_qualite_retourne_figure_et_axes(
     perimetre,
     comparables,
@@ -560,9 +563,7 @@ def test_tracer_synthese_qualite_refuse_colonne_manquante(
     comparables,
     donnees_extremes,
 ):
-    donnees_incompletes = perimetre.drop(
-        columns=[eda_lib.NUTRIMENTS_CLES[0]]
-    )
+    donnees_incompletes = perimetre.drop(columns=[eda_lib.NUTRIMENTS_CLES[0]])
 
     with pytest.raises(ValueError, match="colonnes manquantes"):
         viz.tracer_synthese_qualite(
@@ -576,9 +577,7 @@ def test_tracer_synthese_qualite_refuse_ecart_energie_absent(
     perimetre,
     donnees_extremes,
 ):
-    comparables_incomplets = pd.DataFrame(
-        {"autre_colonne": [1, 2]}
-    )
+    comparables_incomplets = pd.DataFrame({"autre_colonne": [1, 2]})
 
     with pytest.raises(ValueError, match="colonnes manquantes"):
         viz.tracer_synthese_qualite(
@@ -592,9 +591,7 @@ def test_tracer_synthese_qualite_refuse_code_absent(
     perimetre,
     comparables,
 ):
-    extremes_incomplets = pd.DataFrame(
-        {"autre_colonne": [1, 2]}
-    )
+    extremes_incomplets = pd.DataFrame({"autre_colonne": [1, 2]})
 
     with pytest.raises(ValueError, match="colonnes manquantes"):
         viz.tracer_synthese_qualite(

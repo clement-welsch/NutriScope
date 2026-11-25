@@ -12,8 +12,8 @@ import pytest
 
 from src.storage.commun import EXPORTS, NUTRIMENTS_CLES, RACINE, SQL_CONTROLES
 from src.storage.convert_parquet import SCHEMA, convertir
-from src.storage.preparer_csv import ecrire_csv_nettoye
 from src.storage.export_features import chemin_schema, exporter
+from src.storage.preparer_csv import ecrire_csv_nettoye
 from src.storage.run_queries import executer, lire_requetes
 
 ECHANTILLON = RACINE / "data/echantillon_france.csv"
@@ -59,9 +59,11 @@ def test_types_du_parquet_conformes_au_schema(jeu):
     fichier = next(jeu["dossier"].rglob("*.parquet"))
     con = duckdb.connect()
     try:
-        types = dict(con.execute(
-            f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM read_parquet('{fichier.as_posix()}'))"
-        ).fetchall())
+        types = dict(
+            con.execute(
+                f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM read_parquet('{fichier.as_posix()}'))"
+            ).fetchall()
+        )
     finally:
         con.close()
     for nom, (type_sql, _) in SCHEMA.items():
@@ -123,7 +125,9 @@ def test_export_date_decrit_et_cible_complete(jeu, tmp_path):
     schema = json.loads(chemin_schema(fichier).read_text(encoding="utf-8"))
     con = duckdb.connect()
     try:
-        colonnes = [r[0] for r in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{fichier.as_posix()}')").fetchall()]
+        colonnes = [
+            r[0] for r in con.execute(f"DESCRIBE SELECT * FROM read_parquet('{fichier.as_posix()}')").fetchall()
+        ]
         manquants, grades = con.execute(
             f"SELECT count(*) FILTER (WHERE nutriscore_grade IS NULL), "
             f"count(*) FILTER (WHERE nutriscore_grade NOT IN ('a','b','c','d','e')) "
@@ -158,7 +162,9 @@ def test_split_stratifie_vingt_pourcent_par_grade(jeu, tmp_path):
             f"SELECT nutriscore_grade, count(*), avg(CASE WHEN split = 'test' THEN 1 ELSE 0 END) "
             f"FROM read_parquet('{fichier.as_posix()}') GROUP BY ALL ORDER BY 1"
         ).fetchall()
-        valeurs = {r[0] for r in con.execute(f"SELECT DISTINCT split FROM read_parquet('{fichier.as_posix()}')").fetchall()}
+        valeurs = {
+            r[0] for r in con.execute(f"SELECT DISTINCT split FROM read_parquet('{fichier.as_posix()}')").fetchall()
+        }
     finally:
         con.close()
     assert valeurs == {"train", "test"}
@@ -203,7 +209,7 @@ def test_schema_decrit_le_split_ecrit(jeu, tmp_path):
 def test_exports_hors_git():
     # l'export est régénérable (commande + graine versionnées) : le fichier lui-même ne doit jamais être suivi
     fichier = EXPORTS / "features_nutriscore_20251014.parquet"
-    ignore = subprocess.run(["git", "check-ignore", "-q", str(fichier)], cwd=RACINE)
+    ignore = subprocess.run(["git", "check-ignore", "-q", str(fichier)], check=False, cwd=RACINE)
     assert EXPORTS == RACINE / "data" / "exports"
     assert ignore.returncode == 0
 

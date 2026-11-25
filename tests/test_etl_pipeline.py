@@ -49,9 +49,7 @@ def test_preparation_pipeline_nettoie_et_conserve_integrite(tmp_path):
     connexion.close()
 
     rapport = tmp_path / "rapport.md"
-    brut, propre, journal, tables = preparer_pipeline(
-        source, tmp_path / "sortie", rapport
-    )
+    brut, propre, journal, tables = preparer_pipeline(source, tmp_path / "sortie", rapport)
 
     assert len(brut) == 2  # Le produit belge est écarté avant les règles.
     assert propre["code"].tolist() == ["0001"]
@@ -66,12 +64,12 @@ def test_preparation_pipeline_nettoie_et_conserve_integrite(tmp_path):
     assert set(tables) == {"products", "brands", "categories", "products_categories", "nutrients"}
     assert tables["products"]["code"].tolist() == ["0001"]
     assert tables["products"]["brand_name"].tolist() == ["marque-b"]
-    assert {"code", "completeness", "name", "brand_name", "nutriscore_grade", "nutriscore_score"} <= set(tables["products"].columns)
+    assert {"code", "completeness", "name", "brand_name", "nutriscore_grade", "nutriscore_score"} <= set(
+        tables["products"].columns
+    )
     assert tables["brands"]["name"].tolist() == ["marque-b"]
     assert tables["categories"]["tag"].tolist() == ["en:beverages"]
-    assert tables["products_categories"].to_dict("records") == [
-        {"code": "0001", "tag": "en:beverages"}
-    ]
+    assert tables["products_categories"].to_dict("records") == [{"code": "0001", "tag": "en:beverages"}]
     assert tables["nutrients"].iloc[0]["energy_kcal"] == 210
     assert pd.isna(tables["nutrients"].iloc[0]["sugars"])
     for nom in set(tables):
@@ -82,16 +80,26 @@ def test_preparation_pipeline_nettoie_et_conserve_integrite(tmp_path):
 
 
 def test_mapping_sql_convertit_nan_en_null_et_borne_aux_contraintes():
-    propre = pd.DataFrame({
-        "code": pd.Series(["0007"], dtype="string"),
-        "completeness": [0.8], "name": ["Produit"], "brand_name": [None],
-        "nutriscore_grade": ["a"], "nutriscore_score": [1],
-        "food_groups_tags": [["en:test"]],
-        "energy_100g": [float("nan")], "energy-kcal_100g": [12.345],
-        "proteins_100g": [101.0], "carbohydrates_100g": [-1.0],
-        "sugars_100g": [None], "fat_100g": [1.0],
-        "saturated-fat_100g": [1.0], "fiber_100g": [1.0], "salt_100g": [1.0],
-    })
+    propre = pd.DataFrame(
+        {
+            "code": pd.Series(["0007"], dtype="string"),
+            "completeness": [0.8],
+            "name": ["Produit"],
+            "brand_name": [None],
+            "nutriscore_grade": ["a"],
+            "nutriscore_score": [1],
+            "food_groups_tags": [["en:test"]],
+            "energy_100g": [float("nan")],
+            "energy-kcal_100g": [12.345],
+            "proteins_100g": [101.0],
+            "carbohydrates_100g": [-1.0],
+            "sugars_100g": [None],
+            "fat_100g": [1.0],
+            "saturated-fat_100g": [1.0],
+            "fiber_100g": [1.0],
+            "salt_100g": [1.0],
+        }
+    )
     tables = vers_tables_sql(propre)
     assert tables["products"]["code"].iloc[0] == "0007"
     assert pd.isna(tables["nutrients"]["energy"].iloc[0])

@@ -20,7 +20,15 @@ from pathlib import Path
 
 import duckdb
 
-from src.storage.commun import EXPORTS, LICENCE, NUTRIMENTS_CLES, PARQUET_PRODUITS, RACINE, creer_vue_produits, sql_chemin
+from src.storage.commun import (
+    EXPORTS,
+    LICENCE,
+    NUTRIMENTS_CLES,
+    PARQUET_PRODUITS,
+    RACINE,
+    creer_vue_produits,
+    sql_chemin,
+)
 
 CIBLE = "nutriscore_grade"
 IDENTIFIANT = "code"
@@ -56,7 +64,11 @@ SELECTION = """
 # colonne : (unité, description, politique des manquants pour le TP 14)
 COLONNES = {
     "code": ("", "Code-barres (texte, zéros de tête conservés). Identifiant : jamais une feature.", "aucun manquant"),
-    "rayon": ("", "Food group OFF de niveau 1 (slug), 'unknown' si absent. Catégorielle.", "aucun manquant ('unknown' est une modalité)"),
+    "rayon": (
+        "",
+        "Food group OFF de niveau 1 (slug), 'unknown' si absent. Catégorielle.",
+        "aucun manquant ('unknown' est une modalité)",
+    ),
     "energy-kcal_100g": ("kcal/100 g", "Énergie, > 0 dans cet export.", "aucun manquant (filtre)"),
     "fat_100g": ("g/100 g", "Lipides.", "aucun manquant (filtre)"),
     "saturated-fat_100g": ("g/100 g", "Acides gras saturés, <= lipides.", "aucun manquant (filtre)"),
@@ -64,15 +76,47 @@ COLONNES = {
     "sugars_100g": ("g/100 g", "Sucres, <= glucides.", "aucun manquant (filtre)"),
     "proteins_100g": ("g/100 g", "Protéines.", "aucun manquant (filtre)"),
     "salt_100g": ("g/100 g", "Sel.", "aucun manquant (filtre)"),
-    "fiber_100g": ("g/100 g", "Fibres.", "imputer par la médiane du rayon (calculée sur le train seulement) + indicateur de manquant"),
-    "additives_n": ("nombre", "Nombre d'additifs déclarés.", "imputer par la médiane du rayon (train seulement) + indicateur de manquant"),
-    "nova_group": ("1 à 4", "Degré de transformation NOVA.", "imputer par le mode du rayon (train seulement) + indicateur de manquant"),
-    "ratio_sucres_glucides": ("ratio 0-1", "sucres / glucides ; NULL si glucides = 0.", "mettre 0 (sans glucides, pas de sucres) + indicateur de manquant"),
-    "ratio_satures_lipides": ("ratio 0-1", "saturés / lipides ; NULL si lipides = 0.", "mettre 0 (sans lipides, pas de saturés) + indicateur de manquant"),
-    "part_energie_lipides": ("ratio", "Part de l'énergie venant des lipides : fat * 9 / energy-kcal.", "aucun manquant (énergie > 0)"),
-    "nutriscore_score": ("points, -15 à 40", "Score numérique dont dérive le grade. JAMAIS une feature : fuite de la cible.", "aucun manquant"),
+    "fiber_100g": (
+        "g/100 g",
+        "Fibres.",
+        "imputer par la médiane du rayon (calculée sur le train seulement) + indicateur de manquant",
+    ),
+    "additives_n": (
+        "nombre",
+        "Nombre d'additifs déclarés.",
+        "imputer par la médiane du rayon (train seulement) + indicateur de manquant",
+    ),
+    "nova_group": (
+        "1 à 4",
+        "Degré de transformation NOVA.",
+        "imputer par le mode du rayon (train seulement) + indicateur de manquant",
+    ),
+    "ratio_sucres_glucides": (
+        "ratio 0-1",
+        "sucres / glucides ; NULL si glucides = 0.",
+        "mettre 0 (sans glucides, pas de sucres) + indicateur de manquant",
+    ),
+    "ratio_satures_lipides": (
+        "ratio 0-1",
+        "saturés / lipides ; NULL si lipides = 0.",
+        "mettre 0 (sans lipides, pas de saturés) + indicateur de manquant",
+    ),
+    "part_energie_lipides": (
+        "ratio",
+        "Part de l'énergie venant des lipides : fat * 9 / energy-kcal.",
+        "aucun manquant (énergie > 0)",
+    ),
+    "nutriscore_score": (
+        "points, -15 à 40",
+        "Score numérique dont dérive le grade. JAMAIS une feature : fuite de la cible.",
+        "aucun manquant",
+    ),
     "nutriscore_grade": ("a-e", "Cible : grade Nutri-Score.", "aucun manquant (filtre)"),
-    "split": ("train / test", "Jeu figé du TP 13, stratifié sur nutriscore_grade. Jamais une feature.", "aucun manquant"),
+    "split": (
+        "train / test",
+        "Jeu figé du TP 13, stratifié sur nutriscore_grade. Jamais une feature.",
+        "aucun manquant",
+    ),
 }
 
 
@@ -92,7 +136,9 @@ def sha256(chemin: str | Path) -> str:
 
 def commit_git() -> str | None:
     try:
-        sortie = subprocess.run(["git", "rev-parse", "HEAD"], cwd=RACINE, capture_output=True, text=True, timeout=10)
+        sortie = subprocess.run(
+            ["git", "rev-parse", "HEAD"], check=False, cwd=RACINE, capture_output=True, text=True, timeout=10
+        )
     except (OSError, subprocess.SubprocessError):
         return None
     return (sortie.stdout.strip() or None) if sortie.returncode == 0 else None
@@ -138,13 +184,15 @@ def exporter(dossier_parquet: str | Path, dossier_sortie: str | Path, date: Date
         """)
         source = f"read_parquet('{sql_chemin(fichier)}')"
         lignes = connexion.execute(f"SELECT count(*) FROM {source}").fetchone()[0]
-        types = dict(connexion.execute(f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM {source})").fetchall())
+        types = dict(
+            connexion.execute(f"SELECT column_name, column_type FROM (DESCRIBE SELECT * FROM {source})").fetchall()
+        )
         manquants = connexion.execute(
             "SELECT " + ", ".join(f'count(*) - count("{c}")' for c in types) + f" FROM {source}"
         ).fetchone()
-        repartition = dict(connexion.execute(
-            f"SELECT {CIBLE}, count(*) FROM {source} GROUP BY {CIBLE} ORDER BY {CIBLE}"
-        ).fetchall())
+        repartition = dict(
+            connexion.execute(f"SELECT {CIBLE}, count(*) FROM {source} GROUP BY {CIBLE} ORDER BY {CIBLE}").fetchall()
+        )
         effectifs_split = {}
         for grade, split, nombre in connexion.execute(
             f"SELECT {CIBLE}, split, count(*) FROM {source} GROUP BY ALL ORDER BY ALL"
@@ -166,11 +214,11 @@ def exporter(dossier_parquet: str | Path, dossier_sortie: str | Path, date: Date
         "repartition_cible": repartition,
         "split": {
             "methode": f"stratifié sur {CIBLE} : dans chaque grade, produits rangés par md5(code || ':{GRAINE}'), "
-                       f"les {PART_TEST:.0%} premiers en test",
+            f"les {PART_TEST:.0%} premiers en test",
             "graine": GRAINE,
             "part_test": PART_TEST,
             "justification_part_test": "20 % : 80 % des produits pour apprendre, et assez de produits de test "
-                                       "dans le grade le plus rare pour des métriques par classe stables.",
+            "dans le grade le plus rare pour des métriques par classe stables.",
             "effectifs_par_grade": effectifs_split,
             "regle_usage": [
                 "fit (imputation, normalisation, modèle) sur le train seulement.",
