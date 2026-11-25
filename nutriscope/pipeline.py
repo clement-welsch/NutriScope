@@ -8,7 +8,7 @@ import json
 import os
 import shutil
 from dataclasses import asdict, dataclass
-from datetime import date
+from datetime import date, datetime, timezone, UTC
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -384,23 +384,41 @@ ETAPES = {
 def executer(etape: str, config: Configuration) -> None:
     """Exécute une étape choisie ou le pipeline complet."""
     if etape == "all":
-        # TODO — Définir l'ordre de all avec les étapes déclarées dans ETAPES.
-        # Lance charger, nettoyer, charger_base, parquet, puis exports avec la même
-        # Configuration. Réutilise le chemin d'exécution d'une étape seule pour
-        # bénéficier du même affichage et du même journal. Arrête au premier échec.
-        # Contrôle — Avec des fonctions factices, vérifie l'ordre puis fais lever
-        # une exception à nettoyer et vérifie qu'aucune étape suivante n'est appelée.
-        raise NotImplementedError("L'orchestration complète reste à implémenter.")
+        for nom in ETAPES:
+            executer(nom, config)
+        return
 
-    resultat = ETAPES[etape](config)
-    # TODO — Encadrer l'appel ETAPES[etape](config) pour journaliser succès et échec.
-    # Sous <dossier_donnees>/logs, ajoute une ligne JSONL par exécution d'étape.
-    # Note l'horodatage réel, la date des données, l'étape, la durée et le statut.
-    # En cas de succès, ajoute lignes et fichiers depuis ResultatEtape, avec les
-    # chemins convertis en chaînes. En cas d'échec, mesure quand même la durée,
-    # ajoute le message d'erreur, puis propage l'exception à l'appelant.
-    # Contrôle — Provoque un succès puis un échec avec des fonctions factices.
-    # Vérifie que les deux entrées JSON sont lisibles et que l'échec se propage.
+    dossier_logs = config.dossier_donnees / "logs"
+    dossier_logs.mkdir(parents=True, exist_ok=True)
+    journal = dossier_logs / "pipeline.jsonl"
+    entree: dict[str, object] = {
+        "horodatage": datetime.now(UTC).isoformat(),
+        "date_donnees": config.date_execution.isoformat(),
+        "etape": etape,
+    }
+
+    def journaliser() -> None:
+        with journal.open("a", encoding="utf-8") as fichier:
+            fichier.write(json.dumps(entree, ensure_ascii=False) + "\n")
+
+    debut = perf_counter()
+    try:
+        resultat = ETAPES[etape](config)
+    except Exception as erreur:
+        entree.update(statut="echec", duree_s=perf_counter() - debut, erreur=str(erreur))
+        try:
+            journaliser()
+        except OSError as erreur_journal:
+            erreur.add_note(f"Impossible d'écrire dans {journal} : {erreur_journal}")
+        raise
+
+    entree.update(
+        statut="succes",
+        duree_s=resultat.duree_s,
+        lignes=resultat.lignes,
+        fichiers=[str(chemin) for chemin in resultat.fichiers],
+    )
+    journaliser()
     print(f"{etape} : {resultat.lignes} lignes en {resultat.duree_s:.2f} s")
 
 
