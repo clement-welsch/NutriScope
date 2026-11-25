@@ -8,7 +8,7 @@ import json
 import os
 import shutil
 from dataclasses import asdict, dataclass
-from datetime import date, datetime, timezone, UTC
+from datetime import UTC, date, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import perf_counter
@@ -21,6 +21,7 @@ from src.cleaning import nettoyer as nettoyer_tp9
 from src.config.settings import POSTGRES_DB_ALIAS
 from src.etl_pipeline import extraire_brut, vers_tables_sql
 from src.report import generer_rapport
+from src.storage.commun import LICENCE
 from src.storage.convert_parquet import convertir
 from src.storage.export_features import chemin_schema, exporter, sha256
 from src.storage.preparer_csv import preparer
@@ -85,6 +86,7 @@ def charger(config: Configuration) -> ResultatEtape:
 
         manifeste = {
             "statut": "termine",
+            "licence": LICENCE,
             "chemin_source": str(source),
             "nom_copie": copie.name,
             "date": config.date_execution.isoformat(),
