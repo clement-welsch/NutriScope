@@ -22,7 +22,7 @@ from src.config.settings import POSTGRES_DB_ALIAS
 from src.etl_pipeline import extraire_brut, vers_tables_sql
 from src.report import generer_rapport
 from src.storage.convert_parquet import convertir
-from src.storage.export_features import sha256
+from src.storage.export_features import chemin_schema, exporter, sha256
 from src.storage.preparer_csv import preparer
 
 RACINE = Path(__file__).resolve().parents[1]
@@ -337,19 +337,39 @@ def parquet(config: Configuration) -> ResultatEtape:
 
 def exports(config: Configuration) -> ResultatEtape:
     """Produit l'export ML daté et son schéma à partir du Parquet complet."""
-    # TODO 1 — Chercher sous parquet/ le dossier de la date demandée, puis le
-    # plus récent. Ne retiens que les dossiers avec _SUCCESS, leur schéma et des
-    # partitions. Si aucun dossier complet n'existe, indique de lancer parquet.
-    #
-    # TODO 2 — Appeler src.storage.export_features.exporter() avec le dossier
-    # retenu, <dossier_donnees>/exports et config.date_execution. L'exporteur
-    # gère le split stratifié sur le grade, la graine 42 et le refus d'écrasement.
-    # Garde force=False tant qu'aucune option explicite n'a été demandée.
-    # Retrouve le schéma avec chemin_schema(), lis son champ lignes et retourne
-    # la durée, ce nombre de produits et les chemins du Parquet et du JSON.
-    # Contrôle — Compare les affectations train/test par code sur deux exports
-    # isolés du même jeu et vérifie qu'un rejeu ne remplace pas un export figé.
-    raise NotImplementedError("L'étape exports reste à implémenter.")
+    debut = perf_counter()
+    racine_parquet = config.dossier_donnees / "parquet"
+    nom_demande = f"produits_{config.date_execution:%Y%m%d}"
+    candidats = sorted(
+        racine_parquet.glob("produits_" + "[0-9]" * 8),
+        key=lambda dossier: (dossier.name == nom_demande, dossier.name),
+        reverse=True,
+    )
+    dossier_parquet = next(
+        (
+            dossier
+            for dossier in candidats
+            if (dossier / "_SUCCESS").is_file()
+            and (dossier / "schema_produits.json").is_file()
+            and any(partition.is_file() for partition in dossier.glob("rayon=*/*.parquet"))
+        ),
+        None,
+    )
+    if dossier_parquet is None:
+        raise FileNotFoundError(
+            f"Aucun jeu Parquet complet dans {racine_parquet}. Lance d'abord l'étape parquet."
+        )
+
+    fichier = exporter(dossier_parquet, config.dossier_donnees / "exports", config.date_execution)
+    schema = chemin_schema(fichier)
+    with schema.open(encoding="utf-8") as entree:
+        lignes = json.load(entree)["lignes"]
+
+    return ResultatEtape(
+        duree_s=perf_counter() - debut,
+        lignes=lignes,
+        fichiers=(fichier, schema),
+    )
 
 
 ETAPES = {
