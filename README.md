@@ -121,9 +121,11 @@ Les volumes peuvent évoluer au fil des traitements et des règles de nettoyage.
 
 ## Lancer le pipeline TP13
 
-Depuis un clone du dépôt, à sa racine, installe Python 3.12 et Docker, puis crée l'environnement Python. Exemple PowerShell :
+Installe Git, Python 3.12 et Docker, puis clone le jalon TP13 et crée l'environnement Python. Exemple PowerShell :
 
 ```powershell
+git clone --branch v0.3 https://github.com/clement-welsch/NutriScope.git
+Set-Location NutriScope
 py -3.12 -m venv .venv
 $python = ".\.venv\Scripts\python.exe"
 & $python -m pip install -r requirements.txt

@@ -68,18 +68,29 @@ Mesures du 25 novembre 2026 issues de `logs/pipeline.jsonl`.
 Windows 11 (build 22631), processeur Intel x86-64 avec 16 processeurs logiques visibles,
 Python 3.12.16, DuckDB 1.5.5, pandas 3.0.5, PyArrow 25.0.0 et PostgreSQL 17 sous Docker.
 
-| Étape | Échantillon France (10 000 lignes) | Lignes en sortie |
-|---|---:|---:|
-| `charger` | 0,074 s | 10 000 |
-| `nettoyer` | 0,670 s | 10 000 |
-| `charger_base` | 2,746 s | 10 000 |
-| `parquet` | 0,877 s | 10 000 |
-| `exports` | 0,236 s | 5 489 |
+| Étape | Échantillon (s) | Lignes | Source complète (s) | Lignes |
+|---|---:|---:|---:|---:|
+| `charger` | 0,074 | 10 000 | 23,063 | 4 811 891 |
+| `nettoyer` | 0,670 | 10 000 | 81,507 | 1 273 539 |
+| `charger_base` | 2,746 | 10 000 | 68,907 | 1 273 539 |
+| `parquet` | 0,877 | 10 000 | 26,910 | 1 273 539 |
+| `exports` | 0,236 | 5 489 | 1,630 | 461 698 |
 
 Le chargement PostgreSQL domine sur l'échantillon. Cette étape inclut la
 construction de cinq tables d'import, leur sérialisation et leur insertion dans
 PostgreSQL. L'effectif exporté est inférieur car l'export ML filtre les lignes qui
 ne satisfont pas ses critères nutritionnels et de grade.
+Sur les 7,95 Go de la source complète, le nettoyage domine. Il inclut la projection
+France et les règles TP9. Avec le chargement PostgreSQL, il représente environ
+les trois quarts du temps mesuré.
+
+## Vérification en clone neuf
+
+Un clone local distinct et un environnement Python 3.12 neuf ont exécuté les
+cinq étapes sur l'échantillon de 10 000 lignes avec une base de test dédiée.
+La co-évaluation par une autre équipe reste à réaliser. Pour consigner son retour,
+noter la version testée, l'environnement, chaque commande dont un prérequis a dû
+être deviné et les effectifs observés dans PostgreSQL et le Parquet.
 
 ## Ce que la phase 4 lira
 

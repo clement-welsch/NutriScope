@@ -461,3 +461,11 @@ Un état des lieux du Kanban a également été ajouté dans `docs/etat-des-lieu
 La dépendance aux outils passe désormais par `uv` pour que l’installation et les commandes de développement utilisent l’environnement déclaré dans le projet. `requirements.txt` reste disponible pour les usages fondés sur `pip`.
 
 Les hooks pytest sont configurés, mais leur exécution lors de cette mise à jour n’est pas consignée comme une validation. Le reformatage Ruff a été appliqué ; aucun résultat de tests ou de vérification Ruff n’est ajouté ici sans exécution vérifiée.
+
+## 25 novembre 2026 — Pipeline de bout en bout TP13
+
+- Les cinq étapes s'exécutent depuis une commande et partagent le nettoyé daté. Le journal JSONL trace les succès, les échecs et les durées.
+- Le pipeline a traité un échantillon de 10 000 lignes et le fichier complet de 4 811 891 lignes. PostgreSQL et le Parquet partitionné comptent chacun 1 273 539 produits sur le jeu complet. L'export ML contient 461 698 lignes.
+- Un clone local neuf a reproduit le flux sur l'échantillon. Sa suite de tests a révélé que le benchmark Windows utilisait `psutil` sans dépendance directe. Le paquet est désormais déclaré pour Windows.
+- Après installation de la dépendance déclarée, les 149 tests passent dans ce clone, dont 12 nouveaux cas propres au pipeline TP13.
+- Les commandes, durées et conventions du split sont consignées dans [le guide TP13](data/pipeline.md). Le retour de l'autre équipe reste à recueillir.
