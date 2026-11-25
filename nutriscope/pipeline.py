@@ -214,13 +214,13 @@ def _chercher_nettoye(config: Configuration) -> Path:
 
 def charger_base(config: Configuration) -> ResultatEtape:
     """Recharge PostgreSQL à partir du Parquet nettoyé commun."""
-    from database.connection import create_duckdb_connection
-    from etl.brands import insert_brands
-    from etl.categories import insert_categories
-    from etl.nutrients import insert_nutrients
-    from etl.products import insert_products
-    from etl.products_categories import insert_products_categories
-    from validation.checks import check_product_codes_unique, final_check
+    from src.database.connection import create_duckdb_connection
+    from src.etl.brands import insert_brands
+    from src.etl.categories import insert_categories
+    from src.etl.nutrients import insert_nutrients
+    from src.etl.products import insert_products
+    from src.etl.products_categories import insert_products_categories
+    from src.validation.checks import check_product_codes_unique, final_check
 
     debut = perf_counter()
     propre = pd.read_parquet(_chercher_nettoye(config))
