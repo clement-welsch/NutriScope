@@ -138,7 +138,7 @@ def _compte_rendu(
         regle=regle,
         lignes_avant=len(avant),
         lignes_apres=len(apres),
-        lignes_touchees=sum(touchees),
+        lignes_touchees=int(sum(touchees)),
         details=details,
     )
 
