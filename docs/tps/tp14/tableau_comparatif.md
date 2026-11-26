@@ -1,56 +1,55 @@
-# TP14 - Tableau comparatif des mod�les
+# TP14 — Tableau comparatif des modèles
 
-> Canevas pr�par� le 26 novembre 2026. Remplacer � � RENSEIGNER � par des mesures produites par le notebook ; ne pas recopier les rep�res de l'�nonc�.
+> Canevas préparé le 26 novembre 2026. Remplacer « À RENSEIGNER » par des mesures produites par le notebook ; ne pas recopier les repères de l’énoncé.
 
 ## Conditions de comparaison
 
-| �l�ment | Valeur retenue |
+| Élément | Valeur retenue |
 | --- | --- |
-| Parquet / version / empreinte | � RENSEIGNER |
-| Nombre de lignes | � RENSEIGNER |
-| Split | Split du TP13, conserv� tel quel |
-| Validation crois�e | Stratifi�e, 5 plis, shuffle=True, random_state=42, m�mes indices |
-| Features candidates | 7 nutriments obligatoires, variables optionnelles et cat�gories pr�vues par le sujet |
+| Parquet / version / empreinte | À RENSEIGNER |
+| Nombre de lignes | À RENSEIGNER |
+| Split | Split du TP13, conservé tel quel |
+| Validation croisée | Stratifiée, 5 plis, shuffle=True, random_state=42, mêmes indices |
+| Features candidates | 7 nutriments obligatoires, variables optionnelles et catégories prévues par le sujet |
 | Colonnes exclues | nutriscore_score, code, product_name, brands, split et la cible |
-| Pr�traitement | Imputation, indicateurs de manque, standardisation et one-hot avec regroupement rare, appris dans le pipeline |
+| Prétraitement | Imputation, indicateurs de manque, standardisation et one-hot avec regroupement rare, appris dans le pipeline |
 
-## R�sultats CV sur le train
+## Résultats CV sur le train
 
-Consigner les moyennes et �carts-types r�ellement calcul�s. Les temps doivent provenir de l'ex�cution du notebook.
+Consigner les moyennes et écarts-types réellement calculés. Les temps doivent provenir de l’exécution du notebook.
 
-| Mod�le | F1 macro (moy. � �cart-type) | Accuracy | Balanced accuracy | Fit moyen (s) | Pr�diction moyenne (s) |
+| Modèle | F1 macro (moy. ± écart-type) | Accuracy | Balanced accuracy | Fit moyen (s) | Prédiction moyenne (s) |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Dummy - classe majoritaire | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| Dummy - stratifi� | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| Arbre - profondeur 3 | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| Arbre - profondeur 8 | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| R�gression logistique | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| For�t al�atoire | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
-| Mod�le �quilibr� (si retenu) | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
+| Dummy — classe majoritaire | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Dummy — stratifié | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Arbre — profondeur 3 | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Arbre — profondeur 8 | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Régression logistique | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Forêt aléatoire | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
+| Modèle équilibré (si retenu) | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
 
-## Test final - apr�s le choix du mod�le
+## Test final — après le choix du modèle
 
-| Mod�le retenu | F1 macro | Accuracy | Balanced accuracy | �cart CV/test en F1 macro |
+| Modèle retenu | F1 macro | Accuracy | Balanced accuracy | Écart CV/test en F1 macro |
 | --- | ---: | ---: | ---: | ---: |
-| � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER | � RENSEIGNER |
+| À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER | À RENSEIGNER |
 
-**Matrice de confusion normalis�e par ligne :** � RENSEIGNER (chaque ligne somme � 1).
+**Matrice de confusion normalisée par ligne :** À RENSEIGNER (chaque ligne somme à 1).
 
-**Classes difficiles et direction des confusions :** � RENSEIGNER.
+**Classes difficiles et direction des confusions :** À RENSEIGNER.
 
-## Analyse � r�diger apr�s les mesures
+## Analyse à rédiger après les mesures
 
-- Rapport accuracy / F1 macro de la baseline majoritaire et explication : � RENSEIGNER.
-- D�s�quilibre des classes et effet de class_weight balanced : � RENSEIGNER.
-- Fuite reproduite avec nutriscore_score : F1 macro et importance par permutation : � RENSEIGNER.
-- Contr�le anti-fuite et contr�le n�gatif : � RENSEIGNER.
-- Importances du mod�le honn�te, coh�rence avec les composantes officielles et proxies : � RENSEIGNER.
-- Trois erreurs r�elles de natures diff�rentes : produit, nutriments, diagnostic et action : � RENSEIGNER.
-- Phrase de synth�se � reporter dans docs/journal.md : � RENSEIGNER.
+- Rapport accuracy / F1 macro de la baseline majoritaire et explication : À RENSEIGNER.
+- Déséquilibre des classes et effet de class_weight balanced : À RENSEIGNER.
+- Fuite reproduite avec nutriscore_score : F1 macro et importance par permutation : À RENSEIGNER.
+- Contrôle anti-fuite et contrôle négatif : À RENSEIGNER.
+- Importances du modèle honnête, cohérence avec les composantes officielles et proxies : À RENSEIGNER.
+- Trois erreurs réelles de natures différentes : produit, nutriments, diagnostic et action : À RENSEIGNER.
+- Phrase de synthèse à reporter dans docs/journal.md : À RENSEIGNER.
 
-## R�f�rences
+## Références
 
-- �nonc� : [tp-14-predire-le-nutriscore.md](tp-14-predire-le-nutriscore.md).
+- Énoncé : [tp-14-predire-le-nutriscore.md](tp-14-predire-le-nutriscore.md).
 - Notebook : [notebooks/ml_nutriscore.ipynb](../../../notebooks/ml_nutriscore.ipynb).
-- Donn�es Open Food Facts contributors, licence ODbL 1.0.
-
+- Données Open Food Facts contributors, licence ODbL 1.0.
